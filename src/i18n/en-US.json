@@ -1,0 +1,21 @@
+{
+  "machine.pickaxe": "Pickaxe",
+  "machine.generator": "Generator",
+  "machine.miner": "Miner",
+  "machine.box": "Storage",
+  "machine.battery": "Battery",
+
+  "resource.coal": "Coal",
+  "resource.stone": "Stone",
+  "resource.energy": "Energy",
+
+  "recipe.": "-",
+  "recipe.ghost": "Ghost",
+  "recipe.manual-coal": "Coal",
+  "recipe.manual-stone": "Stone",
+  "recipe.coal-energy": "Coal Fuel",
+  "recipe.coal-miner": "Coal Mining",
+  "recipe.stone-miner": "Stone Mining",
+  "recipe.stone-box": "Stone",
+  "recipe.coal-box": "Coal"
+}
