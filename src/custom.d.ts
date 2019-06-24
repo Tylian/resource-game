@@ -12,9 +12,10 @@ declare module "*.json" {
 }
 
 declare module 'redom' {
-  function mount(parent: RedomElement, child: RedomElement, before?: RedomElement, replace?: boolean): RedomElement;
-}
-
-interface Window {
-  engine: Engine;
+  export function mount(parent: RedomElement, child: RedomElement, before?: RedomElement, replace?: boolean): RedomElement;
+  
+  export function place<T extends RedomComponent>(View: RedomComponentCtor<T>, initData?: any): Place;
+  export interface RedomComponentCtor<T> {
+    new (data?: any): T;
+  }
 }

@@ -40,16 +40,7 @@ function isChanceRecipe(recipe: RecipeMeta): recipe is ChanceRecipe {
   return Array.isArray(recipe.results);
 }
 
-class ResourceItem implements RedomComponent {
-  public el = el('li');
-  update(data: Resource & { name: string }) {
-    this.el.textContent = `${data.name}: ${data.amount}/${data.maximum}`;
-  }
-}
-
-export default class Machine implements RedomComponent {
-  public el: HTMLElement;
-
+export default class Machine {
   public x = 0;
   public y = 0;
 
@@ -59,12 +50,8 @@ export default class Machine implements RedomComponent {
   // TODO make the resources a combination of machine + recipe?
   public resources = new Map<string, Resource>();
 
-  private progress: number | null = null;
-  private recipeName = '';
-
-  private recipeButtons = new Map<string, HTMLElement>();
-
-  private resourceList = list('ul', ResourceItem);
+  public progress: number | null = null;
+  public recipeName = '';
 
   public ghostTime: number = 0;
   public ghostResources = new Map<string, Resource>();
@@ -111,7 +98,6 @@ export default class Machine implements RedomComponent {
     }
 
     this.setGhost(true);
-    this.el = this.generateElement();
   }
 
   //#region ghost
@@ -206,45 +192,6 @@ export default class Machine implements RedomComponent {
     ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
     ctx.stroke();
     ctx.restore();
-  }
-
-  public generateElement(): HTMLElement {
-    for(let recipe of this.recipes) {
-      this.recipeButtons.set(recipe, el('button', i18n(`recipe.${recipe}`), (el) => {
-        el.addEventListener('click', e => {
-          this.setRecipe(recipe);
-        });
-      }))
-    }
-
-    return el('div',
-      el('h1', i18n(`machine.${this.type}`)),
-      this.manual && el('button.manual', 'Activate', (el) => {
-        el.addEventListener('click', e => {
-          this.poke();
-        });
-      }),
-      el('h2', 'Resources'),
-      this.resourceList,
-      el('h2', 'Recipes'),
-      el('div.recipes', [...this.recipeButtons.values()])
-    );
-  }
-
-  public update() {
-    let update = [];
-    for(let [key, resource] of this.resources) {
-      update.push({
-        name: i18n(`resource.${key}`),
-        ...resource
-      });
-    }
-
-    for(let [recipe, button] of this.recipeButtons) {
-      button.classList.toggle('active', this.recipeName == recipe);
-    }
-
-    this.resourceList.update(update);
   }
 
   public tick() {
@@ -437,6 +384,11 @@ export default class Machine implements RedomComponent {
 
     this.recipeName = name;
     this.updateResources();
+  }
+
+  public equals(machine: Machine) {
+    if(!(machine instanceof Machine)) return false;
+    return this.uuid === machine.uuid;
   }
 
   private updateResources() {

@@ -2,6 +2,7 @@ import Machine, { InstanceData } from "./Machine";
 import * as redom from 'redom';
 
 import translate from './i18n';
+import InfoComponent from "./dom/Info";
 const i18n = translate('en-US');
 
 const enum DragMode {
@@ -42,8 +43,9 @@ export default class Engine {
   private tempMachine: Machine = null;
 
   private machineFocus: Machine = null;
+  private infoNode: InfoComponent;
   
-  constructor(public canvas: HTMLCanvasElement, public infoContainer: HTMLElement, public ctx = canvas.getContext("2d")) {
+  constructor(public canvas: HTMLCanvasElement, infoContainer: HTMLElement, public ctx = canvas.getContext("2d")) {
     canvas.addEventListener("mousedown", (e) => {
       if(e.button == 2) {
         this.dragMode = DragMode.Camera;
@@ -105,6 +107,9 @@ export default class Engine {
       e.preventDefault();
       return false;
     });
+
+    this.infoNode = new InfoComponent(this.machineFocus);
+    redom.mount(document.body, this.infoNode, infoContainer, true);
   }
 
   public createMachine(id: string) {
@@ -119,7 +124,7 @@ export default class Engine {
     }
 
     if(this.machineFocus !== null) {
-      this.machineFocus.update();
+      this.infoNode.update(this.machineFocus);
     }
   }
 
@@ -191,13 +196,9 @@ export default class Engine {
 
         if(machine !== null) {
           this.machineFocus = machine;
-          this.infoContainer.innerHTML = "";
-          redom.mount(this.infoContainer, machine);
         } else if(this.machineFocus !== null) {
-          redom.unmount(this.infoContainer, this.machineFocus);
           this.machineFocus = null;
         }
-        this.infoContainer.classList.toggle('hidden', this.machineFocus === null);
 
         break;
       case 1:
@@ -213,6 +214,8 @@ export default class Engine {
   }
 
   public fromJson(data: SaveData) {
+    this.machines.clear();
+
     this.camera.x = data.camera.x;
     this.camera.y = data.camera.y;
 
