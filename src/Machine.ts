@@ -248,8 +248,17 @@ export default class Machine implements RedomComponent {
   }
 
   public tick() {
-    // resources
-    for(let [name, amount] of this.getPullResources()) {
+    // Only pull resources when not building
+    if(!this.isGhost() || (this.isGhost() && this.progress === null)) {
+      this.pullResources();
+    }
+
+    this.processRecipe();
+  }
+
+  private pullResources() {
+     // resources
+     for(let [name, amount] of this.getPullResources()) {
       let remaining = amount;
       let resource = this.resources.get(name);
       for(let input of this.inputs) {
@@ -283,8 +292,6 @@ export default class Machine implements RedomComponent {
         }
       }
     }
-
-    this.processRecipe();
   }
 
   public poke() {
