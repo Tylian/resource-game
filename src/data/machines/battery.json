@@ -1,11 +1,13 @@
 {
-  "radius": 40,
+  "radius": 25,
+  "category": "storage",
   "ingredients": {
-    "stone": 5
+    "iron-ingot": 2,
+    "coal": 1
   },
   "buildtime": 15,
   "resources": {
-    "energy": 10000
+    "energy": 1000000
   },
   "recipes": []
 }

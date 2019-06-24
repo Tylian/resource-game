@@ -1,0 +1,12 @@
+{
+  "radius": 40,
+  "category": "generators",
+  "resources": {},
+  "ingredients": {
+    "iron-ingot": 12
+  },
+  "buildtime": 80,
+  "recipes": [
+    "energy-steam"
+  ]
+}

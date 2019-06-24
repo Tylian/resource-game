@@ -1,11 +1,13 @@
 {
   "radius": 40,
+  "category": "processing",
   "resources": {},
   "ingredients": {
-    "stone": 5
+    "stone": 5,
+    "iron-ingot": 10
   },
   "buildtime": 80,
   "recipes": [
-    "energy-coal"
+    "furnace-energy-iron"
   ]
 }

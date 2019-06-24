@@ -2,9 +2,9 @@
   "speed": 50,
   "ingredients": {},
   "resources": {
-    "stone": 10
+    "iron-ore": 10
   },
   "results": {
-    "stone": 1
+    "iron-ore": 1
   }
 }

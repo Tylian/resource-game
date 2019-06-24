@@ -1,0 +1,12 @@
+{
+  "radius": 25,
+  "category": "resources",
+  "ingredients": {
+    "iron-ingot": 3
+  },
+  "resources": {},
+  "buildtime": 30,
+  "recipes": [
+    "pump-water"
+  ]
+}

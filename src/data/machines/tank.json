@@ -2,15 +2,12 @@
   "radius": 40,
   "category": "storage",
   "ingredients": {
-    "wood": 5
+    "iron-ingot": 5
   },
   "buildtime": 10,
   "resources": {},
   "recipes": [
-    "box-coal",
-    "box-iron-ingot",
-    "box-iron-ore",
-    "box-stone",
-    "box-wood"
+    "tank-water",
+    "tank-steam"
   ]
 }

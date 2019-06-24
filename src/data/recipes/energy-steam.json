@@ -1,13 +1,13 @@
 {
   "speed": 5,
   "ingredients": {
-    "coal": 1
+    "steam": 300
   },
   "resources": {
-    "coal": 10,
-    "energy": 4000
+    "steam": 3000,
+    "energy": 1500
   },
   "results": {
-    "energy": 250
+    "energy": 150
   }
 }

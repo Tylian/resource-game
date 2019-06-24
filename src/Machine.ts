@@ -77,9 +77,10 @@ export default class Machine {
     return this.data.recipes.length > 0;
   }
 
-  public get recipe() {
+  public get recipe(): RecipeMeta {
     if(this.isGhost()) {
       return {
+        key: "ghost",
         speed: this.data.buildtime,
         ingredients: this.data.ingredients,
         resources: this.data.ingredients,
@@ -122,7 +123,7 @@ export default class Machine {
   }
   //#endregion
 
-  public render(ctx: CanvasRenderingContext2D, focus: boolean) {
+  public render(ctx: CanvasRenderingContext2D, color: string) {
     ctx.save();
 
     if(this.isGhost()) {
@@ -165,17 +166,16 @@ export default class Machine {
       r -= slice;
     }
 
-    ctx.fillStyle = focus ? "red" : "black";
+    ctx.fillStyle = color;
     ctx.strokeStyle = "white";
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 3;
     ctx.textAlign = "center";
-    
     ctx.textBaseline = "middle";
 
     if(this.recipe === null) {
       ctx.font = "bold 12px monospaced";
       ctx.strokeText(i18n(`machine.${this.type}`), this.x, this.y);
-      ctx.fillText(i18n(`machine.${this.type}`), this.x, this.y + 1);
+      ctx.fillText(i18n(`machine.${this.type}`), this.x, this.y);
     } else {
       ctx.font = "bold 12px monospaced";
       ctx.strokeText(i18n(`machine.${this.type}`), this.x, this.y - 6);
@@ -187,9 +187,32 @@ export default class Machine {
     }
 
     ctx.lineWidth = 1;
-    ctx.strokeStyle = focus ? "red" : "black";
+    ctx.strokeStyle = color;
     ctx.beginPath();
     ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  public drawOutputLine(ctx: CanvasRenderingContext2D, output: Machine, color: string) {
+    ctx.save();
+    ctx.fillStyle = "transparent";
+    ctx.strokeStyle = `2px solid ${color}`;
+    let angle = Math.atan2(output.y - this.y, output.x - this.x);
+    let head = 10;
+
+    let fromX = this.x + Math.cos(angle) * this.radius;
+    let fromY = this.y + Math.sin(angle) * this.radius;
+    let toX = output.x - Math.cos(angle) * output.radius;
+    let toY = output.y - Math.sin(angle) * output.radius;
+
+    ctx.beginPath();
+    ctx.moveTo(fromX, fromY);
+    ctx.lineTo(toX, toY);
+    
+    ctx.lineTo(toX - head * Math.cos(angle - Math.PI/6), toY - head * Math.sin(angle - Math.PI/6));
+    ctx.moveTo(toX, toY);
+    ctx.lineTo(toX - head * Math.cos(angle + Math.PI/6), toY - head * Math.sin(angle + Math.PI/6));
     ctx.stroke();
     ctx.restore();
   }
@@ -266,7 +289,7 @@ export default class Machine {
     }
 
     let resource = this.resources.get(name);
-    let available = Math.min(resource.amount, Math.floor(amount));
+    let available = Math.floor(Math.min(resource.amount, amount));
 
     if(!simulate) {
       resource.amount -= available;
@@ -488,7 +511,7 @@ export default class Machine {
     } else {
       for(let [name, amount] of Object.entries(this.recipe.ingredients)) {
         let resource = this.resources.get(name);
-        yield [name, Math.max(0, Math.min((amount * 2) - resource.amount, resource.maximum))];
+        yield [name, Math.max(0, Math.min(Math.ceil(amount * 2) - resource.amount, resource.maximum))];
       }
     }
   }

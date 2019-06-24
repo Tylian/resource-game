@@ -1,0 +1,12 @@
+{
+  "radius": 40,
+  "category": "processing",
+  "resources": {},
+  "ingredients": {
+    "stone": 5
+  },
+  "buildtime": 80,
+  "recipes": [
+    "furnace-basic-iron"
+  ]
+}

@@ -3,7 +3,8 @@ import * as redom from 'redom';
 
 import translate from './i18n';
 import InfoComponent from "./dom/Info";
-const i18n = translate('en-US');
+import { listData, DataType, getData } from "./data";
+import ToolboxComponent from "./dom/Toolbox";
 
 const enum DragMode {
   None,
@@ -16,6 +17,7 @@ interface MachineJson extends InstanceData {
 }
 
 interface SaveData {
+  seenResources: Iterable<string>;
   camera: {
     x: number;
     y: number;
@@ -44,8 +46,11 @@ export default class Engine {
 
   private machineFocus: Machine = null;
   private infoNode: InfoComponent;
+  private toolboxNode: ToolboxComponent;
+
+  private seenResources = new Set<string>();
   
-  constructor(public canvas: HTMLCanvasElement, infoContainer: HTMLElement, public ctx = canvas.getContext("2d")) {
+  constructor(public canvas: HTMLCanvasElement, public ctx = canvas.getContext("2d", { alpha: false })) {
     canvas.addEventListener("mousedown", (e) => {
       if(e.button == 2) {
         this.dragMode = DragMode.Camera;
@@ -108,8 +113,16 @@ export default class Engine {
       return false;
     });
 
-    this.infoNode = new InfoComponent(this.machineFocus);
-    redom.mount(document.body, this.infoNode, infoContainer, true);
+    this.infoNode = new InfoComponent(this);
+  }
+
+  public mountInfobox(container: HTMLElement) {
+    redom.mount(document.body, this.infoNode, container, true);
+  }
+
+  public mountToolbox(container: HTMLElement) {
+    this.toolboxNode = new ToolboxComponent(this, listData(DataType.Machine).map(key => getData(DataType.Machine, key)));
+    redom.mount(document.body, this.toolboxNode, container, true);
   }
 
   public createMachine(id: string) {
@@ -117,10 +130,37 @@ export default class Engine {
       this.tempMachine = new Machine(id);
     }
   }
+
+  public machineUnlocked(id: string): boolean {
+    for(let ingredient of Object.keys(getData(DataType.Machine, id).ingredients)) {
+      if(!this.seenResources.has(ingredient)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  public recipeUnlocked(id: string): boolean {
+    for(let ingredient of Object.keys(getData(DataType.Recipe, id).ingredients)) {
+      if(!this.seenResources.has(ingredient)) {
+        return false;
+      }
+    }
+    return true;
+  }
   
   public tick() {
     for(let machine of this.machines.values()) {
       machine.tick();
+    }
+
+    for(let machine of this.machines.values()) {
+      for(let [key, resource] of machine.resources) {
+        if(!this.seenResources.has(key) && resource.amount > 0) {
+          this.seenResources.add(key);
+          this.toolboxNode.update();
+        }
+      }
     }
 
     if(this.machineFocus !== null) {
@@ -130,48 +170,27 @@ export default class Engine {
 
   public render() {
     this.ctx.resetTransform();
-    this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
+    this.ctx.fillStyle = 'white';
+    this.ctx.fillRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
     this.ctx.translate(-(this.camera.x + this.cameraOffset.x), -(this.camera.y + this.cameraOffset.y));
     for(let [uuid, machine] of this.machines) {
-      machine.render(this.ctx, this.machineFocus !== null && this.machineFocus.uuid == uuid);
+      machine.render(this.ctx, machine.equals(this.machineFocus) ? 'green' : 'black');
     }
 
     // XXX Can't combine with above loop because it renders under stuff
     for(let [uuid, machine] of this.machines) {
       for(let output of machine.outputs) {
-        this.drawOutputLine(machine, output);
+        machine.drawOutputLine(this.ctx, output, machine.equals(this.machineFocus) ? 'green' : 'black');
       }
     }
 
     if(this.tempMachine) {
       this.ctx.globalAlpha = 0.5;
-      this.tempMachine.render(this.ctx, false);
+      this.tempMachine.render(this.ctx, "black");
       this.ctx.globalAlpha = 1;
     }
   }
-
-  private drawOutputLine(input: Machine, output: Machine) {
-    this.ctx.save();
-    this.ctx.fillStyle = "transparent";
-    this.ctx.strokeStyle = "2px solid black";
-    let angle = Math.atan2(output.y - input.y, output.x - input.x);
-    let head = 10;
-
-    let fromX = input.x + Math.cos(angle) * input.radius;
-    let fromY = input.y + Math.sin(angle) * input.radius;
-    let toX = output.x - Math.cos(angle) * output.radius;
-    let toY = output.y - Math.sin(angle) * output.radius;
-
-    this.ctx.beginPath();
-    this.ctx.moveTo(fromX, fromY);
-    this.ctx.lineTo(toX, toY);
-    
-    this.ctx.lineTo(toX - head * Math.cos(angle - Math.PI/6), toY - head * Math.sin(angle - Math.PI/6));
-    this.ctx.moveTo(toX, toY);
-    this.ctx.lineTo(toX - head * Math.cos(angle + Math.PI/6), toY - head * Math.sin(angle + Math.PI/6));
-    this.ctx.stroke();
-    this.ctx.restore();
-  }
+  
 
   public getMachineAt(x: number, y: number): Machine | null {
     let realX = this.camera.x + x;
@@ -213,11 +232,19 @@ export default class Engine {
     }
   }
 
+  public fillMachine() {
+    for(let [key, resource] of this.machineFocus.resources) {
+      resource.amount = resource.maximum;
+    }
+  }
+
   public fromJson(data: SaveData) {
     this.machines.clear();
 
     this.camera.x = data.camera.x;
     this.camera.y = data.camera.y;
+
+    this.seenResources = new Set(data.seenResources);
 
     // create machines
     for(let [uuid, info] of Object.entries(data.machines)) {
@@ -233,6 +260,9 @@ export default class Engine {
         machine.addOutput(this.machines.get(uuid));
       });
     }
+
+    this.infoNode.update(this.machineFocus);
+    this.toolboxNode.update();
   }
 
   public toJson(): SaveData {
@@ -241,7 +271,8 @@ export default class Engine {
         x: this.camera.x,
         y: this.camera.y
       },
-      machines: {}
+      machines: {},
+      seenResources: [...this.seenResources]
     };
 
     // create machines

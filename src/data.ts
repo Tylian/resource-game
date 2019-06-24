@@ -2,11 +2,18 @@ export interface ResourceMap<T = number> {
   [resource: string]: T
 }
 
+export interface Key {
+  key: string;
+}
+
 export interface ResourceMeta {
+  key: string,
   color: string;
 }
 
 export interface MachineMeta {
+  key: string;
+  category: string;
   manual: boolean;
   radius: number;
   ingredients: ResourceMap;
@@ -15,22 +22,28 @@ export interface MachineMeta {
   recipes: string[];
 }
 
-export interface StandardRecipe {
+export interface BaseRecipe {
+  key: string;
   speed: number;
   ingredients: ResourceMap;
   resources: ResourceMap;
+}
+
+export interface StandardRecipe extends BaseRecipe  {
   results: ResourceMap;
 }
 
-export interface ChanceRecipe {
-  speed: number;
-  ingredients: ResourceMap;
-  resources: ResourceMap;
+export interface ChanceRecipe extends BaseRecipe {
   results: ResourceMap[];
   chances: number[];
 }
 
 export type RecipeMeta = StandardRecipe | ChanceRecipe;
+
+export interface UnknownMeta {
+  key: string,
+  [key: string]: any
+}
 
 export const enum DataType {
   Machine,
@@ -63,10 +76,13 @@ export function hasData(type: DataType, id: string): boolean {
 export function getData(type: DataType.Machine, id: string): MachineMeta;
 export function getData(type: DataType.Recipe, id: string): RecipeMeta;
 export function getData(type: DataType.Resource, id: string): ResourceMeta;
-export function getData(type: DataType, id: string): any {
+export function getData(type: DataType, id: string): UnknownMeta {
   if(!hasData(type, id)) {
     throw new ReferenceError(`Unknown data type ${type} ${id}`);
   }
 
-  return requireMap[type](`./${id}.json`);
+  return {
+    key: id,
+    ...requireMap[type](`./${id}.json`)
+  };
 }

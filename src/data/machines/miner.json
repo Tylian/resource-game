@@ -1,12 +1,15 @@
 {
   "radius": 60,
+  "category": "resources",
   "ingredients": {
-    "stone": 5
+    "stone": 2,
+    "iron-ingot": 5
   },
   "resources": {},
   "buildtime": 100,
   "recipes": [
     "miner-stone",
-    "miner-coal"
+    "miner-coal",
+    "miner-iron"
   ]
 }

@@ -6,8 +6,6 @@
   "buildtime": 30,
   "manual": true,
   "recipes": [
-    "manual-coal",
-    "manual-stone",
-    "manual-iron"
+    "manual-wood"
   ]
 }

@@ -4,10 +4,10 @@
     "energy": 180
   },
   "resources": {
-    "coal": 10,
+    "iron-ore": 10,
     "energy": 1800
   },
   "results": {
-    "coal": 1
+    "iron-ore": 1
   }
 }
