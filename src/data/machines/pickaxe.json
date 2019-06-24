@@ -1,0 +1,11 @@
+{
+  "manual": true,
+  "radius": 30,
+  "resources": {},
+  "ingredients": {},
+  "buildtime": 30,
+  "recipes": [
+    "manual-coal",
+    "manual-stone"
+  ]
+}

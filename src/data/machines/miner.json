@@ -1,0 +1,12 @@
+{
+  "radius": 60,
+  "ingredients": {
+    "stone": 5
+  },
+  "resources": {},
+  "buildtime": 100,
+  "recipes": [
+    "miner-stone",
+    "miner-coal"
+  ]
+}

@@ -9,13 +9,12 @@
   "resource.stone": "Stone",
   "resource.energy": "Energy",
 
-  "recipe.": "-",
   "recipe.ghost": "Ghost",
   "recipe.manual-coal": "Coal",
   "recipe.manual-stone": "Stone",
-  "recipe.coal-energy": "Coal Fuel",
-  "recipe.coal-miner": "Coal Mining",
-  "recipe.stone-miner": "Stone Mining",
-  "recipe.stone-box": "Stone",
-  "recipe.coal-box": "Coal"
+  "recipe.energy-coal": "Coal Fuel",
+  "recipe.miner-coal": "Coal Mining",
+  "recipe.miner-stone": "Stone Mining",
+  "recipe.box-stone": "Stone",
+  "recipe.box-coal": "Coal"
 }

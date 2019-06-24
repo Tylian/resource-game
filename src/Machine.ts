@@ -3,23 +3,11 @@ import uuidv4 from 'uuid/v4';
 import translate from './i18n';
 const i18n = translate('en-US');
 
-const machineData: {[ name: string]: MachineMeta } = require('./data/machines.json');
-const recipeData: {[ name: string]: RecipeMeta } = require('./data/recipes.json');
-const resourceData: {[ name: string]: ResourceMeta } = require('./data/resources.json');
-
 const PI2 = Math.PI * 2;
 const nHalfPI = -Math.PI / 2;
 
 import { el, RedomComponent, list } from 'redom';
-
-export interface ResourceMap<T = number> {
-  [resource: string]: T
-}
-
-export interface ResourceMeta {
-  name: string;
-  color: string;
-}
+import { getData, DataType, hasData, RecipeMeta, ResourceMap, ChanceRecipe } from './data';
 
 export interface InstanceData {
   x: number;
@@ -27,38 +15,12 @@ export interface InstanceData {
   outputs: string[];
   recipe: string | null;
   resources?: ResourceMap;
-  remaining?: number;
+  progress?: number;
 }
 
 export interface Resource {
   amount: number;
   maximum: number;
-}
-
-export interface StandardRecipe {
-  speed: number;
-  ingredients: ResourceMap;
-  resources: ResourceMap;
-  results: ResourceMap;
-}
-
-export interface ChanceRecipe {
-  speed: number;
-  ingredients: ResourceMap;
-  resources: ResourceMap;
-  results: ResourceMap[];
-  chances: number[];
-}
-
-type RecipeMeta = StandardRecipe | ChanceRecipe;
-
-export interface MachineMeta {
-  manual: boolean;
-  radius: number;
-  ingredients: ResourceMap;
-  buildtime: number;
-  resources: ResourceMap;
-  recipes: string[];
 }
 
 export interface RecipeProgress {
@@ -86,7 +48,7 @@ class ResourceItem implements RedomComponent {
 }
 
 export default class Machine implements RedomComponent {
-  el: HTMLElement;
+  public el: HTMLElement;
 
   public x = 0;
   public y = 0;
@@ -97,50 +59,54 @@ export default class Machine implements RedomComponent {
   // TODO make the resources a combination of machine + recipe?
   public resources = new Map<string, Resource>();
 
-  private remaining: number | null = null;
+  private progress: number | null = null;
   private recipeName = '';
 
   private recipeButtons = new Map<string, HTMLElement>();
 
   private resourceList = list('ul', ResourceItem);
 
-  public ghost: boolean = false;
   public ghostTime: number = 0;
   public ghostResources = new Map<string, Resource>();
 
   //#region convenience getters
+  public get data() {
+    return getData(DataType.Machine, this.type);
+  }
+
   public get manual() {
-    return machineData[this.type].manual === true
+    return this.data.manual === true;
   }
 
   public get radius() {
-    return machineData[this.type].radius;
+    return this.data.radius;
   }
 
   public get recipes() {
-    return machineData[this.type].recipes;
-  }
-
-  public get ingredients() {
-    return machineData[this.type].ingredients;
+    return this.data.recipes;
   }
 
   public get hasRecipes() {
-    return machineData[this.type].recipes.length > 0;
-  }
-
-  public get buildTime() {
-    return machineData[this.type].buildtime;
+    return this.data.recipes.length > 0;
   }
 
   public get recipe() {
-    return recipeData[this.recipeName] !== undefined 
-      ? recipeData[this.recipeName] : null;
+    if(this.isGhost()) {
+      return {
+        speed: this.data.buildtime,
+        ingredients: this.data.ingredients,
+        resources: this.data.ingredients,
+        results: {}
+      };
+    } else {
+      return hasData(DataType.Recipe, this.recipeName) 
+        ? getData(DataType.Recipe, this.recipeName) : null;
+    }
   }
   //#endregion
 
   constructor(public type: string, public uuid = uuidv4()) {
-    if(machineData[type] as MachineMeta === undefined) {
+    if(!hasData(DataType.Machine, type)) {
       throw new ReferenceError(`${type} is not a valid machine type`);
     }
 
@@ -148,9 +114,14 @@ export default class Machine implements RedomComponent {
     this.el = this.generateElement();
   }
 
+  //#region ghost
+  public isGhost(): boolean {
+    return this.recipeName === "ghost";
+  }
+
   public setGhost(ghost: boolean) {
-    this.ghost = ghost;
-    this.ghostTime =  0;
+    this.recipeName = ghost ? "ghost" : null;
+    this.progress = null;
 
     this.resources.clear();
     this.updateResources();
@@ -163,31 +134,17 @@ export default class Machine implements RedomComponent {
       this.removeInput(machine);
     }
   }
-
-  public checkGhostIngredients() {
-    for(let [name, amount] of Object.entries(this.ingredients)) {
-      let resource = this.resources.get(name);
-      if(resource.amount < amount) {
-        return false;
-      }
-    }
-
-    return true;
-  }
+  //#endregion
 
   public render(ctx: CanvasRenderingContext2D, focus: boolean) {
     ctx.save();
 
-    let recipePercent = 0;
-
-    if(this.ghost) {
+    if(this.isGhost()) {
       ctx.globalAlpha = 0.5;
-      recipePercent = this.ghostTime / this.buildTime;
-    } else {
-      if(this.remaining !== null && this.recipeValid()) {
-        recipePercent = 1 - (this.remaining / this.recipe.speed);
-      }
     }
+    
+    let recipePercent = this.progress !== null && this.recipeValid()
+      ? this.progress / this.recipe.speed : 0;
 
     if(recipePercent > 0) {
       ctx.fillStyle = "rgba(255, 0, 0, 0.5)";
@@ -213,7 +170,7 @@ export default class Machine implements RedomComponent {
     ctx.lineWidth = 2;
     for(let [name, resource] of this.resources) {
       ctx.beginPath();
-      ctx.fillStyle = `${resourceData[name].color}`;
+      ctx.fillStyle = `${getData(DataType.Resource, name).color}`;
       ctx.moveTo(this.x, this.y);
       ctx.lineTo(this.x, this.y - r);
       ctx.arc(this.x, this.y, r, nHalfPI, nHalfPI + PI2 * (resource.amount / resource.maximum));
@@ -229,13 +186,19 @@ export default class Machine implements RedomComponent {
     
     ctx.textBaseline = "middle";
 
-    ctx.font = "bold 12px monospaced";
-    ctx.strokeText(i18n(`machine.${this.type}`), this.x, this.y - 6);
-    ctx.fillText(i18n(`machine.${this.type}`), this.x, this.y - 5);
-    
-    ctx.font = "12px monospaced";
-    ctx.strokeText(i18n(`recipe.${this.ghost ? "ghost" : this.recipeName}`), this.x, this.y + 6);
-    ctx.fillText(i18n(`recipe.${this.ghost ? "ghost" : this.recipeName}`), this.x, this.y + 7);
+    if(this.recipe === null) {
+      ctx.font = "bold 12px monospaced";
+      ctx.strokeText(i18n(`machine.${this.type}`), this.x, this.y);
+      ctx.fillText(i18n(`machine.${this.type}`), this.x, this.y + 1);
+    } else {
+      ctx.font = "bold 12px monospaced";
+      ctx.strokeText(i18n(`machine.${this.type}`), this.x, this.y - 6);
+      ctx.fillText(i18n(`machine.${this.type}`), this.x, this.y - 5);
+      
+      ctx.font = "12px monospaced";
+      ctx.strokeText(i18n(`recipe.${this.isGhost() ? "ghost" : this.recipeName}`), this.x, this.y + 6);
+      ctx.fillText(i18n(`recipe.${this.isGhost() ? "ghost" : this.recipeName}`), this.x, this.y + 7);
+    }
 
     ctx.lineWidth = 1;
     ctx.strokeStyle = focus ? "red" : "black";
@@ -284,48 +247,57 @@ export default class Machine implements RedomComponent {
     this.resourceList.update(update);
   }
 
-  public move(x: number, y: number) {
-    this.x = x;
-    this.y = y;
-  }
-
   public tick() {
     // resources
     for(let [name, amount] of this.getPullResources()) {
       let remaining = amount;
       let resource = this.resources.get(name);
       for(let input of this.inputs) {
+        if(!this.recipeValid() && input.hasInput(this) && input.resources.has(name))
+          continue;
+
         let pulled = input.pullResource(name, remaining);
         if(pulled > 0) {
           resource.amount += pulled;
           remaining -= pulled;
         }
         
-        if(remaining == 0) {
+        if(remaining <= 0) {
           break;
         }
       }
     }
 
-    // ghost
-    if(this.ghost) {
-      if(this.checkGhostIngredients()) {
-        this.ghostTime++;
-        if(this.ghostTime >= this.buildTime) {
-          this.setGhost(false);
+    // balance
+    for(let [name] of this.getPullResources()) {
+      let resource = this.resources.get(name);
+      for(let input of this.inputs) {
+        if(!this.recipeValid() && input.hasInput(this) && input.resources.has(name)) {
+          let difference = input.resources.get(name).amount - resource.amount; 
+          if(difference > 0) {
+            let pulled = input.pullResource(name, Math.min(difference / 2, resource.maximum - resource.amount));
+            if(pulled > 0) {
+              resource.amount += pulled;
+            }
+          }
         }
       }
-    } else {
-      this.processRecipe();
     }
+
+    this.processRecipe();
   }
 
   public poke() {
-    if(!this.recipeReady() || this.remaining !== null) {
+    if(!this.recipeReady() || this.progress !== null) {
       return;
     }
 
-    this.remaining = this.recipe.speed;
+    this.progress = 0;
+  }
+
+  public move(x: number, y: number) {
+    this.x = x;
+    this.y = y;
   }
 
   /**
@@ -340,7 +312,7 @@ export default class Machine implements RedomComponent {
     }
 
     let resource = this.resources.get(name);
-    let available = Math.min(resource.amount, amount);
+    let available = Math.min(resource.amount, Math.floor(amount));
 
     if(!simulate) {
       resource.amount -= available;
@@ -358,7 +330,7 @@ export default class Machine implements RedomComponent {
   }
 
   public addOutput(machine: Machine) {
-    if(this.uuid == machine.uuid || this.ghost) return;
+    if(this.uuid == machine.uuid || this.isGhost()) return;
     if(!this.outputs.has(machine) && !machine.inputs.has(this)) {
       this.outputs.add(machine);
       machine.inputs.add(this);
@@ -412,7 +384,7 @@ export default class Machine implements RedomComponent {
     let save: InstanceData = {
       x: this.x,
       y: this.y,
-      recipe: this.ghost ? "ghost" : this.recipeName,
+      recipe: this.isGhost() ? "ghost" : this.recipeName,
       outputs: [...this.outputs].map(node => node.uuid),
     };
 
@@ -420,8 +392,8 @@ export default class Machine implements RedomComponent {
       save.resources = Array.from(this.resources).reduce<ResourceMap>((obj, [key, value]) => (obj[key] = value.amount, obj), {});
     }
 
-    if(this.remaining !== null && this.remaining !== undefined) {
-      save.remaining = this.remaining;
+    if(this.progress !== null) {
+      save.progress = this.progress;
     }
 
     return save;
@@ -438,8 +410,8 @@ export default class Machine implements RedomComponent {
       this.resources.get(key).amount = value;
     });
 
-    this.remaining = save.remaining !== null && save.remaining !== undefined
-      ? save.remaining
+    this.progress = save.progress !== null && save.progress !== undefined
+      ? save.progress
       : null;
   }
   //#endregion json
@@ -449,7 +421,7 @@ export default class Machine implements RedomComponent {
    * @param name Internal name of the recipe
    */
   public setRecipe(name: string | null) {
-    if(this.ghost && name !== null) {
+    if(this.isGhost() && name !== null) {
       throw new ReferenceError(`${name} is not a valid recipe on a ghost ${this.type}`);
     }
     if(name !== null && !this.recipes.includes(name)) {
@@ -461,14 +433,20 @@ export default class Machine implements RedomComponent {
   }
 
   private updateResources() {
-    let info = machineData[this.type];
+    let info = getData(DataType.Machine, this.type);
     let resources = {
-      ...(this.ghost ? info.ingredients : info.resources),
+      ...(this.isGhost() ? info.ingredients : info.resources),
       ...(this.recipe !== null ? this.recipe.resources : {})
     };
 
     for(let [name, maximum] of Object.entries(resources)) {
-      this.updateResource(name, maximum);
+      if(this.resources.has(name)) {
+        let resource = this.resources.get(name);
+        resource.amount = Math.min(resource.amount, maximum);
+        resource.maximum = maximum;
+      } else {
+        this.resources.set(name, { amount: 0, maximum: maximum });
+      }
     }
 
     for(let name of this.resources.keys()) {
@@ -478,21 +456,13 @@ export default class Machine implements RedomComponent {
     }
   }
 
-  private updateResource(name: string, maximum: number = 0) {
-    if(this.resources.has(name)) {
-      let resource = this.resources.get(name);
-      resource.amount = Math.min(resource.amount, maximum);
-      resource.maximum = maximum;
-    } else {
-      this.resources.set(name, { amount: 0, maximum: maximum });
-    }
-  }
-
   private recipeValid() {
-    return this.recipe !== null && !Array.isArray(this.recipe.results) && Object.keys(this.recipe.results).length > 0;
+    return this.recipe !== null && (
+      !Array.isArray(this.recipe.results) && Object.keys(this.recipe.results).length > 0
+      || this.isGhost());
   }
 
-  /**6
+  /**
    * Checks if a recipe has all required ingredient(s), and room for the resulting resource(s).
    * @param recipe The recipe to check for
    */
@@ -500,7 +470,7 @@ export default class Machine implements RedomComponent {
     if(!this.recipeValid()) return false;
 
     for(let [name, amount] of Object.entries(this.recipe.ingredients)) {
-      if(!this.resources.has(name) || this.resources.get(name).amount < amount) {
+      if(this.resources.get(name).amount < amount) {
         return false;
       }
     }
@@ -516,41 +486,43 @@ export default class Machine implements RedomComponent {
   }
 
   private processRecipe() {
-    if(!this.recipeValid()) {
-      return;
-    }
-
+    if(!this.recipeValid()) return;
+    
     // Should start a new recipe?
-    if(this.remaining == null && !this.manual) {
+    if(this.progress === null && !(this.manual && !this.isGhost())) {
       if(!this.recipeReady()) {
         return;
       }
 
-      this.remaining = this.recipe.speed;
+      this.progress = 0;
       for(let [name, amount] of Object.entries(this.recipe.ingredients)) {
         this.resources.get(name).amount -= amount;
       }
     }
     
-    if(this.remaining !== null && this.remaining > 0) {
-      this.remaining--;
+    if(this.progress !== null && this.progress < this.recipe.speed) {
+      this.progress++;
 
-      if(this.remaining == 0) {
-        let result = isChanceRecipe(this.recipe)
-          ? pickRandom(this.recipe.results, this.recipe.chances)
-          : this.recipe.results;
+      if(this.progress == this.recipe.speed) {
+        if(this.isGhost()) {
+          this.setGhost(false);
+        } else {
+          let result = isChanceRecipe(this.recipe)
+            ? pickRandom(this.recipe.results, this.recipe.chances)
+            : this.recipe.results;
 
-        for(let [name, amount] of Object.entries(result)) {
-          this.resources.get(name).amount += amount;
+          for(let [name, amount] of Object.entries(result)) {
+            this.resources.get(name).amount += amount;
+          }
         }
         
-        this.remaining = null;
+        this.progress = null;
       }
     }
   }
 
   private * getPullResources(): IterableIterator<[string, number]> {
-    if(this.ghost || !this.recipeValid()) {
+    if(this.isGhost() || !this.recipeValid()) {
       for(let [name, resource] of this.resources) {
         yield [name, Math.max(0, resource.maximum - resource.amount)];
       }

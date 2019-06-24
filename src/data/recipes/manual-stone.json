@@ -1,0 +1,10 @@
+{
+  "speed": 50,
+  "ingredients": {},
+  "resources": {
+    "stone": 10
+  },
+  "results": {
+    "stone": 10
+  }
+}

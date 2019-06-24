@@ -14,6 +14,7 @@
     "@types/cssnano": "^4.0.0",
     "@types/source-map": "0.5.2",
     "@types/uuid": "^3.4.4",
+    "@types/webpack-env": "^1.13.9",
     "@webpack-blocks/core": "^2.0.0",
     "autoprefixer": "^9.6.0",
     "awesome-typescript-loader": "^5.2.1",

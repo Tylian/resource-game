@@ -1,4 +1,4 @@
-import Machine, { InstanceData, MachineMeta } from "./Machine";
+import Machine, { InstanceData } from "./Machine";
 import * as redom from 'redom';
 
 import translate from './i18n';

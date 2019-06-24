@@ -1,0 +1,13 @@
+{
+  "speed": 5,
+  "ingredients": {
+    "coal": 1
+  },
+  "resources": {
+    "coal": 10,
+    "energy": 4000
+  },
+  "results": {
+    "energy": 250
+  }
+}

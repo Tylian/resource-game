@@ -2,9 +2,11 @@ import Engine from "./Engine";
 // import { h } from "preact";
 
 import "./style/style.scss";
-import Machine, { MachineMeta } from "./Machine";
 
-const machineData: {[ name: string]: MachineMeta } = require("./data/machines.json");
+import { el, mount } from "redom";
+import { getData, DataType, listData } from "./data";
+import translate from './i18n';
+const i18n = translate('en-US');
 
 const canvas = document.getElementById("game") as HTMLCanvasElement;
 const machines = document.getElementById("machines") as HTMLDivElement;
@@ -24,17 +26,13 @@ const render = () => {
   requestAnimationFrame(render);
 };
 
-//engine.fromJson(require("./data/save.json"));
-
-for(let [id, machine] of Object.entries(machineData)) {
-  let el = document.createElement("button");
-  el.textContent = id;
-  el.addEventListener("click", () => {
-    engine.createMachine(id);
-  });
-
-  machines.appendChild(el);
-}
+mount(machines, el('span', listData(DataType.Machine).map(key => (
+  el('button', i18n(`machine.${key}`), (el) => {
+    el.addEventListener("click", () => {
+      engine.createMachine(key);
+    });
+  })
+))))
 
 update();
 render();
@@ -42,10 +40,6 @@ render();
 // debug exports
 let exports = {
   engine: engine,
-  Engine: Engine,
-  Machine: Machine,
-  recipeData: require("./data/recipes.json"),
-  machineData: require("./data/machines.json")
 }
 
 for(let [key, value] of Object.entries(exports)) {
