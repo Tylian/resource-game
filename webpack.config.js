@@ -35,8 +35,8 @@ module.exports = createConfig([
   entryPoint('./src/index.ts'),
   setOutput({
     path: path.join(__dirname, 'dist'),
-    filename: '[name].bundle.js',
-    chunkFilename: '[name].bundle.js',
+    filename: 'js/[name].bundle.js',
+    chunkFilename: 'js/[name].bundle.js',
     jsonpScriptType: 'module'
   }),
   optimization({
