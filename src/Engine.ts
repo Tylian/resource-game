@@ -290,7 +290,12 @@ export default class Engine {
         break;
       case 1:
         if(this.machineFocus && machine !== null) {
-          this.machineFocus.toggleOutput(machine);
+          if(e.shiftKey) {
+            this.machineFocus.toggleInput(machine);
+          } else {
+            this.machineFocus.toggleOutput(machine);
+          }
+          
         }
         break;
       case 2: 
