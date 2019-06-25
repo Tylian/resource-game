@@ -180,6 +180,10 @@ export default class Machine {
     ctx.save();
     ctx.fillStyle = "transparent";
     ctx.strokeStyle = color;
+    if(output.isGhost()) {
+      ctx.globalAlpha = 0.5;
+    }
+    
     let angle = Math.atan2(output.y - this.y, output.x - this.x);
     let head = 10;
 
