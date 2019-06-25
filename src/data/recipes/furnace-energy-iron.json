@@ -1,11 +1,12 @@
 {
   "speed": 20,
   "ingredients": {
-    "enegy": 4000,
+    "energy": 4000,
     "iron-ore": 1
   },
   "resources": {
     "energy": 40000,
+    "iron-ore": 10,
     "iron-ingot": 10
   },
   "results": {

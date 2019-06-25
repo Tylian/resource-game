@@ -51,6 +51,16 @@ export default class Engine {
   private seenResources = new Set<string>();
   
   constructor(public canvas: HTMLCanvasElement, public ctx = canvas.getContext("2d", { alpha: false })) {
+    document.addEventListener('keyup', (e) => {
+      let key = e.which || e.keyCode;
+      if(key == 46 && this.machineFocus !== null) {
+        this.machineFocus.clearConnections();
+        this.machines.delete(this.machineFocus.uuid);
+        this.machineFocus = null;
+        this.infoNode.update(null);
+      }
+    }, true);
+
     canvas.addEventListener("mousedown", (e) => {
       if(e.button == 2) {
         this.dragMode = DragMode.Camera;
@@ -251,7 +261,10 @@ export default class Engine {
       let machine = new Machine(info.type, uuid);
       this.machines.set(machine.uuid, machine);
       machine.loadJson(info);
+      
     }
+
+    console.log('created');
 
     // load all data
     for(let [uuid, info] of Object.entries(data.machines)) {
@@ -261,7 +274,8 @@ export default class Engine {
       });
     }
 
-    this.infoNode.update(this.machineFocus);
+    this.machineFocus = null;
+    this.infoNode.update(null);
     this.toolboxNode.update();
   }
 

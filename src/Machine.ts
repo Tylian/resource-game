@@ -53,9 +53,6 @@ export default class Machine {
   public progress: number | null = null;
   public recipeName = '';
 
-  public ghostTime: number = 0;
-  public ghostResources = new Map<string, Resource>();
-
   //#region convenience getters
   public get data() {
     return getData(DataType.Machine, this.type);
@@ -110,16 +107,10 @@ export default class Machine {
     this.recipeName = ghost ? "ghost" : null;
     this.progress = null;
 
+    this.clearConnections();
+
     this.resources.clear();
     this.updateResources();
-
-    for(let machine of this.outputs) {
-      this.removeOutput(machine);
-    }
-
-    for(let machine of this.inputs) {
-      this.removeInput(machine);
-    }
   }
   //#endregion
 
@@ -134,19 +125,12 @@ export default class Machine {
       ? this.progress / this.recipe.speed : 0;
 
     if(recipePercent > 0) {
-      ctx.fillStyle = "rgba(255, 0, 0, 0.5)";
+      ctx.strokeStyle = "rgba(255, 0, 0, 0.5)";
+      ctx.lineWidth = this.radius * 0.15;
 
       ctx.beginPath();
-      ctx.moveTo(this.x, this.y);
-      ctx.lineTo(this.x, this.y - this.radius);
-      ctx.arc(this.x, this.y, this.radius, nHalfPI, nHalfPI + PI2 * recipePercent);
-      ctx.fill();
-
-      ctx.beginPath();
-      ctx.fillStyle = "white";
-      ctx.moveTo(this.x, this.y);
-      ctx.arc(this.x, this.y, this.radius * 0.85, 0, PI2);
-      ctx.fill();
+      ctx.arc(this.x, this.y, this.radius - ctx.lineWidth / 2, nHalfPI, nHalfPI + PI2 * recipePercent);
+      ctx.stroke();
     }
 
     ctx.fillStyle = "transparent";
@@ -154,14 +138,12 @@ export default class Machine {
     let r = this.recipeValid() ? (this.radius * 0.85) : this.radius;
     let slice = r / this.resources.size;
 
-    ctx.lineWidth = 2;
+    ctx.lineWidth = slice;
     for(let [name, resource] of this.resources) {
+      ctx.strokeStyle = `${getData(DataType.Resource, name).color}`;
       ctx.beginPath();
-      ctx.fillStyle = `${getData(DataType.Resource, name).color}`;
-      ctx.moveTo(this.x, this.y);
-      ctx.lineTo(this.x, this.y - r);
-      ctx.arc(this.x, this.y, r, nHalfPI, nHalfPI + PI2 * (resource.amount / resource.maximum));
-      ctx.fill();
+      ctx.arc(this.x, this.y, r - ctx.lineWidth / 2, nHalfPI, nHalfPI + PI2 * (resource.amount / resource.maximum));
+      ctx.stroke();
       
       r -= slice;
     }
@@ -197,7 +179,7 @@ export default class Machine {
   public drawOutputLine(ctx: CanvasRenderingContext2D, output: Machine, color: string) {
     ctx.save();
     ctx.fillStyle = "transparent";
-    ctx.strokeStyle = `2px solid ${color}`;
+    ctx.strokeStyle = color;
     let angle = Math.atan2(output.y - this.y, output.x - this.x);
     let head = 10;
 
@@ -299,6 +281,16 @@ export default class Machine {
   }
 
   //#region node connections
+  public clearConnections() {
+    for(let machine of this.outputs) {
+      this.removeOutput(machine);
+    }
+
+    for(let machine of this.inputs) {
+      this.removeInput(machine);
+    }
+  }
+
   public hasOutput(machine: Machine) {
     for(let item of this.outputs) {
       if(item.uuid == machine.uuid) return true;
@@ -363,6 +355,7 @@ export default class Machine {
       y: this.y,
       recipe: this.isGhost() ? "ghost" : this.recipeName,
       outputs: [...this.outputs].map(node => node.uuid),
+      resources: {}
     };
 
     if(this.resources.size > 0) {
@@ -479,6 +472,8 @@ export default class Machine {
       this.progress = 0;
       for(let [name, amount] of Object.entries(this.recipe.ingredients)) {
         this.resources.get(name).amount -= amount;
+        // XXX js floating point shit ...
+        this.resources.get(name).amount = Math.round(this.resources.get(name).amount / amount) * amount;
       }
     }
     
@@ -511,7 +506,7 @@ export default class Machine {
     } else {
       for(let [name, amount] of Object.entries(this.recipe.ingredients)) {
         let resource = this.resources.get(name);
-        yield [name, Math.max(0, Math.min(Math.ceil(amount * 2) - resource.amount, resource.maximum))];
+        yield [name, Math.max(0, Math.min(Math.ceil(amount * 2 - resource.amount), resource.maximum))];
       }
     }
   }
