@@ -1,6 +1,6 @@
 import { RedomComponent, el, Place, place } from "redom";
 import Engine from "../Engine";
-import { MachineMeta } from "../data";
+import { NodeMeta } from "../data";
 import { evt } from "./utils";
 
 import translate from "../i18n";
@@ -9,11 +9,11 @@ const i18n = translate('en-US');
 import "../style/toolbox.scss";
 import Accordian from "./Accordian";
 
-class MachineButton implements RedomComponent {
+class NodeButton implements RedomComponent {
   public el: HTMLElement;
-  constructor({ engine, machine}: { engine: Engine, machine: MachineMeta }) {
-    this.el = el('button', i18n(`machine.${machine.key}`), evt({
-      click: () => { engine.createMachine(machine.key); }
+  constructor({ engine, node}: { engine: Engine, node: NodeMeta }) {
+    this.el = el('button', i18n(`node.${node.key}`), evt({
+      click: () => { engine.createNode(node.key); }
     }))
   }
 }
@@ -21,18 +21,18 @@ class MachineButton implements RedomComponent {
 export default class ToolboxComponent implements RedomComponent {
   public el: HTMLElement;
   public buttons = new Map<string, Place>();
-  constructor(private engine: Engine, private machines: MachineMeta[]) {
-    let categories = machines
-      .map(machine => machine.category)
+  constructor(private engine: Engine, private nodes: NodeMeta[]) {
+    let categories = nodes
+      .map(node => node.category)
       .filter((value, i, arr) => arr.indexOf(value) == i);
 
     let accordians = categories.map(category => {
-      let matched = machines.filter(machine => machine.category == category);
+      let matched = nodes.filter(node => node.category == category);
       return new Accordian(
         i18n(`category.${category}`),
-        el('div.children', matched.map(machine => {
-          let button = place(MachineButton, { machine, engine });
-          this.buttons.set(machine.key, button)
+        el('div.children', matched.map(node => {
+          let button = place(NodeButton, { node, engine });
+          this.buttons.set(node.key, button)
           return button;
         }))
       );
@@ -44,7 +44,7 @@ export default class ToolboxComponent implements RedomComponent {
 
   update() {
     for(let [key, button] of this.buttons) {
-      button.update(this.engine.machineUnlocked(key));
+      button.update(this.engine.nodeUnlocked(key));
     }
   }
 }

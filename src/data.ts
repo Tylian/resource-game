@@ -11,7 +11,7 @@ export interface ResourceMeta {
   color: string;
 }
 
-export interface MachineMeta {
+export interface NodeMeta {
   key: string;
   category: string;
   manual: boolean;
@@ -46,20 +46,20 @@ export interface UnknownMeta {
 }
 
 export const enum DataType {
-  Machine,
+  Node,
   Recipe,
   Resource
 }
 
 const requireMap = {
-  [DataType.Machine]: require.context('./data/machines/', false, /\.json$/),
+  [DataType.Node]: require.context('./data/nodes/', false, /\.json$/),
   [DataType.Recipe]: require.context('./data/recipes/', false, /\.json$/),
   [DataType.Resource]: require.context('./data/resources/', false, /\.json$/),
 };
 
-type DefaultMap = {[DataType.Machine]: MachineMeta, [DataType.Recipe]: RecipeMeta, [DataType.Resource]: ResourceMeta}
+type DefaultMap = {[DataType.Node]: NodeMeta, [DataType.Recipe]: RecipeMeta, [DataType.Resource]: ResourceMeta}
 const defaultMap: DefaultMap = {
-  [DataType.Machine]: {
+  [DataType.Node]: {
     "key": "default",
     "category": "basic",
     "radius": 30,
@@ -104,7 +104,7 @@ export function hasData(type: DataType, id: string | null | undefined): boolean 
   return requireMap[type].keys().includes(`./${id}.json`);
 }
 
-export function getData(type: DataType.Machine, id: string | null | undefined): MachineMeta | null;
+export function getData(type: DataType.Node, id: string | null | undefined): NodeMeta | null;
 export function getData(type: DataType.Recipe, id: string | null | undefined): RecipeMeta | null;
 export function getData(type: DataType.Resource, id: string | null | undefined): ResourceMeta | null;
 export function getData(type: DataType, id: string | null | undefined): UnknownMeta | null {

@@ -1,17 +1,17 @@
-import Machine, { InstanceData } from "./Machine";
+import Node, { InstanceData } from "./Node";
 import * as redom from 'redom';
 
 import InfoComponent from "./dom/Info";
-import { listData, DataType, getData, MachineMeta } from "./data";
+import { listData, DataType, getData, NodeMeta } from "./data";
 import ToolboxComponent from "./dom/Toolbox";
 
 const enum DragMode {
   None,
   Camera,
-  Machine,
+  Node,
 }
 
-interface MachineJson extends InstanceData {
+interface NodeJson extends InstanceData {
   type: string;
 }
 
@@ -21,8 +21,8 @@ interface SaveData {
     x: number;
     y: number;
   }
-  machines: {
-    [uuid: string]: MachineJson;
+  nodes: {
+    [uuid: string]: NodeJson;
   }
 }
 
@@ -40,7 +40,7 @@ interface Camera {
 const Konami: number[] = [13, 65, 66, 39, 37, 39, 37, 40, 40, 38, 38];
 
 export default class Engine {
-  public machines = new Map<string, Machine>();
+  public nodes = new Map<string, Node>();
   public camera: Camera = { x: 0, y: 0, zoom: 1 };
   public cameraOffset: Point = { x: 0, y: 0 }
 
@@ -48,13 +48,13 @@ export default class Engine {
   private dragOrigin: Point = { x: 0, y: 0 };
   private dragOffset: Point = { x: 0, y: 0 };
 
-  private machineTarget: Machine | null = null;
-  private tempMachine: Machine | null = null;
-  private mouseMachine: Machine | null = null;
+  private targetNode: Node | null = null;
+  private tempNode: Node | null = null;
+  private mouseNode: Node | null = null;
+  private focusNode: Node | null = null;
 
-  private machineFocus: Machine | null = null;
-  private infoNode: InfoComponent;
-  private toolboxNode: ToolboxComponent;
+  private infoboxElem: InfoComponent;
+  private toolboxElem: ToolboxComponent;
 
   private seenResources = new Set<string>();
 
@@ -69,11 +69,11 @@ export default class Engine {
         console.log(`${e.key}: ${key}`);
       }
 
-      if((key == 46 || key == 8) && this.machineFocus !== null) {
-        this.machineFocus.clearConnections();
-        this.machines.delete(this.machineFocus.uuid);
-        this.machineFocus = null;
-        this.infoNode.update(null);
+      if((key == 46 || key == 8) && this.focusNode !== null) {
+        this.focusNode.clearConnections();
+        this.nodes.delete(this.focusNode.uuid);
+        this.focusNode = null;
+        this.infoboxElem.update(null);
       }
 
       this.konami = [key, ...this.konami].slice(0, Konami.length);
@@ -81,14 +81,14 @@ export default class Engine {
         this.debugMode();
       }
 
-      if(this.debug && key == 70 && this.machineFocus !== null) {
-        for(let [key, resource] of this.machineFocus.resources) {
+      if(this.debug && key == 70 && this.focusNode !== null) {
+        for(let [key, resource] of this.focusNode.resources) {
           resource.amount = resource.maximum;
         }
       }
 
-      if(this.debug && key == 69 && this.machineFocus !== null) {
-        for(let [key, resource] of this.machineFocus.resources) {
+      if(this.debug && key == 69 && this.focusNode !== null) {
+        for(let [key, resource] of this.focusNode.resources) {
           resource.amount = 0;
         }
       }
@@ -97,14 +97,14 @@ export default class Engine {
 
     canvas.addEventListener("mousedown", (e) => {
       if(e.button == 0) {
-        let machine = this.getMachineAt(e.clientX, e.clientY);
-        if(machine !== null) {
-          this.dragMode = DragMode.Machine;
-          this.machineTarget = machine;
+        let node = this.getNodeAt(e.clientX, e.clientY);
+        if(node !== null) {
+          this.dragMode = DragMode.Node;
+          this.targetNode = node;
           this.dragOrigin = { x: e.clientX, y: e.clientY };
           this.dragOffset = {
-            x: machine.x - (this.camera.x + e.clientX),
-            y: machine.y - (this.camera.y + e.clientY)
+            x: node.x - (this.camera.x + e.clientX),
+            y: node.y - (this.camera.y + e.clientY)
           };
         }
       } else if(e.button == 2) {
@@ -116,24 +116,24 @@ export default class Engine {
       } 
     });
     canvas.addEventListener("mousemove", (e) => {
-      this.mouseMachine = this.getMachineAt(e.clientX, e.clientY);
+      this.mouseNode = this.getNodeAt(e.clientX, e.clientY);
       if(this.dragMode == DragMode.Camera) {
         this.cameraOffset.x = this.dragOrigin.x - e.clientX;
         this.cameraOffset.y = this.dragOrigin.y - e.clientY;
-      } else if(this.dragMode == DragMode.Machine && this.machineTarget !== null) {
-        this.machineTarget.move(
+      } else if(this.dragMode == DragMode.Node && this.targetNode !== null) {
+        this.targetNode.move(
           (this.camera.x + e.clientX) + this.dragOffset.x,
           (this.camera.y + e.clientY) + this.dragOffset.y
         );
       }
 
       // Update cursor
-      let machine = this.getMachineAt(e.clientX, e.clientY);
-      canvas.classList.toggle("cursor-move", machine !== null && !machine.manual);
-      canvas.classList.toggle("cursor-pointer", machine !== null && machine.manual);
+      let node = this.getNodeAt(e.clientX, e.clientY);
+      canvas.classList.toggle("cursor-move", node !== null && !node.manual);
+      canvas.classList.toggle("cursor-pointer", node !== null && node.manual);
 
-      if(this.tempMachine) {
-        this.tempMachine.move(this.camera.x + e.clientX, this.camera.y + e.clientY);
+      if(this.tempNode) {
+        this.tempNode.move(this.camera.x + e.clientX, this.camera.y + e.clientY);
       }
     });
     canvas.addEventListener("mouseup", (e) => {
@@ -146,10 +146,10 @@ export default class Engine {
         this.camera.y += this.cameraOffset.y;
         this.dragMode = DragMode.None;
         this.cameraOffset = { x: 0, y: 0 };
-      } else if(this.dragMode == DragMode.Machine && e.button == 0) {
+      } else if(this.dragMode == DragMode.Node && e.button == 0) {
         this.dragMode = DragMode.None;
         this.dragOffset = { x: 0, y: 0 };
-        this.machineTarget = null;
+        this.targetNode = null;
       }
     });
 
@@ -158,28 +158,28 @@ export default class Engine {
       return false;
     });
 
-    this.infoNode = new InfoComponent(this);
+    this.infoboxElem = new InfoComponent(this);
   }
 
   public mountInfobox(container: HTMLElement) {
-    redom.mount(document.body, this.infoNode, container, true);
+    redom.mount(document.body, this.infoboxElem, container, true);
   }
 
   public mountToolbox(container: HTMLElement) {
-    this.toolboxNode = new ToolboxComponent(this, listData(DataType.Machine).map(key => <MachineMeta>getData(DataType.Machine, key)));
-    redom.mount(document.body, this.toolboxNode, container, true);
+    this.toolboxElem = new ToolboxComponent(this, listData(DataType.Node).map(key => <NodeMeta>getData(DataType.Node, key)));
+    redom.mount(document.body, this.toolboxElem, container, true);
   }
 
-  public createMachine(id: string) {
-    if(this.tempMachine == null) {
-      this.tempMachine = new Machine(id);
+  public createNode(id: string) {
+    if(this.tempNode == null) {
+      this.tempNode = new Node(id);
     }
   }
 
-  public machineUnlocked(id: string): boolean {
+  public nodeUnlocked(id: string): boolean {
     if(this.debug) return true;
 
-    const data = getData(DataType.Machine, id);
+    const data = getData(DataType.Node, id);
     if(data === null) return false;
     for(let ingredient of Object.keys(data.ingredients)) {
       if(!this.seenResources.has(ingredient)) {
@@ -203,21 +203,21 @@ export default class Engine {
   }
   
   public tick() {
-    for(let machine of this.machines.values()) {
-      machine.tick();
+    for(let node of this.nodes.values()) {
+      node.tick();
     }
 
-    for(let machine of this.machines.values()) {
-      for(let [key, resource] of machine.resources) {
+    for(let node of this.nodes.values()) {
+      for(let [key, resource] of node.resources) {
         if(!this.seenResources.has(key) && resource.amount > 0) {
           this.seenResources.add(key);
-          this.toolboxNode.update();
+          this.toolboxElem.update();
         }
       }
     }
 
-    if(this.machineFocus !== null) {
-      this.infoNode.update(this.machineFocus);
+    if(this.focusNode !== null) {
+      this.infoboxElem.update(this.focusNode);
     }
   }
 
@@ -227,122 +227,122 @@ export default class Engine {
     this.ctx.fillRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
     this.ctx.translate(-(this.camera.x + this.cameraOffset.x), -(this.camera.y + this.cameraOffset.y));
     
-    for(let [uuid, machine] of this.machines) {
-      for(let output of machine.outputs) {
-        if(!(machine.equals(this.machineFocus) || machine.equals(this.mouseMachine))) {
-          machine.drawOutputLine(this.ctx, output, 'rgba(0, 0, 0, 0.5)');
+    for(let [uuid, node] of this.nodes) {
+      for(let output of node.outputs) {
+        if(!(node.equals(this.focusNode) || node.equals(this.mouseNode))) {
+          node.drawOutputLine(this.ctx, output, 'rgba(0, 0, 0, 0.5)');
         }
       }
     }
     
-    for(let [uuid, machine] of this.machines) {
-      machine.render(this.ctx, machine.equals(this.machineFocus));
+    for(let [uuid, node] of this.nodes) {
+      node.render(this.ctx, node.equals(this.focusNode));
     }
 
-    if(this.mouseMachine !== null && !this.mouseMachine.equals(this.machineFocus)) {
-      for(let output of this.mouseMachine.outputs) {
-        this.mouseMachine.drawOutputLine(this.ctx, output, 'black');
+    if(this.mouseNode !== null && !this.mouseNode.equals(this.focusNode)) {
+      for(let output of this.mouseNode.outputs) {
+        this.mouseNode.drawOutputLine(this.ctx, output, 'black');
       }
     }
 
-    if(this.machineFocus !== null) {
-      for(let output of this.machineFocus.outputs) {
-        this.machineFocus.drawOutputLine(this.ctx, output, 'green');
+    if(this.focusNode !== null) {
+      for(let output of this.focusNode.outputs) {
+        this.focusNode.drawOutputLine(this.ctx, output, 'green');
       }
     }
 
     // XXX Can't combine with above loop because it renders under stuff
-    if(this.tempMachine !== null) {
+    if(this.tempNode !== null) {
       this.ctx.globalAlpha = 0.5;
-      this.tempMachine.render(this.ctx, false);
+      this.tempNode.render(this.ctx, false);
       this.ctx.globalAlpha = 1;
     }
   }
   
 
-  public getMachineAt(x: number, y: number): Machine | null {
+  public getNodeAt(x: number, y: number): Node | null {
     let realX = this.camera.x + x;
     let realY = this.camera.y + y;
-    for(let machine of this.machines.values()) {
-      if(Math.pow(realX - machine.x, 2) + Math.pow(realY - machine.y, 2) < Math.pow(machine.radius, 2)) {
-        return machine;
+    for(let node of this.nodes.values()) {
+      if(Math.pow(realX - node.x, 2) + Math.pow(realY - node.y, 2) < Math.pow(node.radius, 2)) {
+        return node;
       }
     }
     return null;
   }
 
   public click(e: MouseEvent) {
-    let machine = this.getMachineAt(e.clientX, e.clientY);
+    let node = this.getNodeAt(e.clientX, e.clientY);
     switch(e.button) {
       case 0: 
-        if(this.tempMachine) {
-          this.machines.set(this.tempMachine.uuid, this.tempMachine);
-          this.tempMachine = null;
+        if(this.tempNode) {
+          this.nodes.set(this.tempNode.uuid, this.tempNode);
+          this.tempNode = null;
           break;
         }
 
-        if(machine !== null) {
-          this.machineFocus = machine;
-        } else if(this.machineFocus !== null) {
-          this.machineFocus = null;
+        if(node !== null) {
+          this.focusNode = node;
+        } else if(this.focusNode !== null) {
+          this.focusNode = null;
         }
 
         break;
       case 1:
-        if(this.machineFocus && machine !== null) {
+        if(this.focusNode && node !== null) {
           if(e.shiftKey) {
-            this.machineFocus.toggleInput(machine);
+            this.focusNode.toggleInput(node);
           } else {
-            this.machineFocus.toggleOutput(machine);
+            this.focusNode.toggleOutput(node);
           }
           
         }
         break;
       case 2: 
-        if(this.tempMachine) {
-          this.tempMachine = null;
+        if(this.tempNode) {
+          this.tempNode = null;
         }
     }
   }
 
-  public getMachine(uuid: string): Machine | undefined {
-    return this.machines.get(uuid);
+  public getNode(uuid: string): Node | undefined {
+    return this.nodes.get(uuid);
   }
 
   public debugMode() {
     console.log('Debug mode enabled');
     this.debug = true;
-    this.toolboxNode.update();
-    this.infoNode.update(this.machineFocus);
+    this.toolboxElem.update();
+    this.infoboxElem.update(this.focusNode);
   }
 
   public fromJson(data: SaveData) {
-    this.machines.clear();
+    this.nodes.clear();
 
     this.camera.x = data.camera.x;
     this.camera.y = data.camera.y;
 
     this.seenResources = new Set(data.seenResources);
-    // create machines
-    for(let [uuid, info] of Object.entries(data.machines)) {
-      let machine = new Machine(info.type, uuid);
-      this.machines.set(machine.uuid, machine);
-      machine.loadJson(info);
+    // create nodes
+    for(let [uuid, info] of Object.entries(data.nodes)) {
+      let node = new Node(info.type, uuid);
+      this.nodes.set(node.uuid, node);
+      node.loadJson(info);
     }
 
     // load all data
-    for(let [uuid, machine] of this.machines) {
-      data.machines[uuid].outputs.forEach(uuid => {
-        let output = this.machines.get(uuid);
+    for(let [uuid, node] of this.nodes) {
+      data.nodes[uuid].outputs.forEach(uuid => {
+        let output = this.nodes.get(uuid);
         if(output !== undefined) {
-          machine.addOutput(output);
+          node.addOutput(output);
         }
       });
     }
 
-    this.machineFocus = null;
-    this.infoNode.update(null);
-    this.toolboxNode.update();
+    this.focusNode = null;
+    this.infoboxElem.update(null);
+    this.toolboxElem.update();
   }
 
   public toJson(): SaveData {
@@ -351,15 +351,15 @@ export default class Engine {
         x: this.camera.x,
         y: this.camera.y
       },
-      machines: {},
+      nodes: {},
       seenResources: [...this.seenResources]
     };
 
-    // create machines
-    for(let [uuid, machine] of this.machines) {
-      result.machines[uuid] = {
-        type: machine.type,
-        ...machine.toJson()
+    // create nodes
+    for(let [uuid, node] of this.nodes) {
+      result.nodes[uuid] = {
+        type: node.type,
+        ...node.toJson()
       };
     }
 

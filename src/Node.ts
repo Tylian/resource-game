@@ -1,13 +1,12 @@
 import uuidv4 from 'uuid/v4';
 
+import { getData, DataType, hasData, RecipeMeta, ResourceMap, ChanceRecipe, NodeMeta } from './data';
+
 import translate from './i18n';
 const i18n = translate('en-US');
 
 const PI2 = Math.PI * 2;
 const nHalfPI = -Math.PI / 2;
-
-import { el, RedomComponent, list } from 'redom';
-import { getData, DataType, hasData, RecipeMeta, ResourceMap, ChanceRecipe, MachineMeta } from './data';
 
 export interface InstanceData {
   x: number;
@@ -55,14 +54,14 @@ function drawText(ctx: CanvasRenderingContext2D, text: string, x: number, y: num
   ctx.restore();
 }
 
-export default class Machine {
+export default class Node {
   public x = 0;
   public y = 0;
 
-  public inputs = new Set<Machine>();
-  public outputs = new Set<Machine>();
+  public inputs = new Set<Node>();
+  public outputs = new Set<Node>();
 
-  // TODO make the resources a combination of machine + recipe?
+  // TODO make the resources a combination of node2 + recipe?
   public resources = new Map<string, Resource>();
 
   public progress: number | null = null;
@@ -70,7 +69,7 @@ export default class Machine {
 
   //#region convenience getters
   public get data() {
-    return getData(DataType.Machine, this.type) as MachineMeta;
+    return getData(DataType.Node, this.type) as NodeMeta;
   }
 
   public get manual() {
@@ -106,8 +105,8 @@ export default class Machine {
   //#endregion
 
   constructor(public type: string, public uuid = uuidv4()) {
-    if(!hasData(DataType.Machine, type)) {
-      throw new ReferenceError(`${type} is not a valid machine type`);
+    if(!hasData(DataType.Node, type)) {
+      throw new ReferenceError(`${type} is not a valid node type`);
     }
 
     this.setGhost(true);
@@ -180,10 +179,10 @@ export default class Machine {
 
     if(this.recipe === null || this.isGhost()) {
       ctx.font = "bold 9px sans-serif";
-      drawText(ctx, i18n(`machine.${this.type}`), this.x, this.y, mainColor, accentColor);
+      drawText(ctx, i18n(`node.${this.type}`), this.x, this.y, mainColor, accentColor);
     } else {
       ctx.font = "bold 9px sans-serif";
-      drawText(ctx, i18n(`machine.${this.type}`), this.x, this.y - lineHeight / 2, mainColor, accentColor);
+      drawText(ctx, i18n(`node.${this.type}`), this.x, this.y - lineHeight / 2, mainColor, accentColor);
       ctx.font = "9px sans-serif";
       drawText(ctx, i18n(`recipe.${this.isGhost() ? "ghost" : this.recipeName}`), this.x, this.y + lineHeight / 2, mainColor, accentColor);
     }
@@ -191,7 +190,7 @@ export default class Machine {
     ctx.restore();
   }
 
-  public drawOutputLine(ctx: CanvasRenderingContext2D, output: Machine, color: string) {
+  public drawOutputLine(ctx: CanvasRenderingContext2D, output: Node, color: string) {
     ctx.save();
     ctx.fillStyle = "transparent";
     ctx.strokeStyle = color;
@@ -233,7 +232,7 @@ export default class Machine {
       let remaining = amount;
       let resource = <Resource>this.getResource(name);
       let inputs = [...this.inputs]
-        .filter(machine => machine.getResource(name) !== null)
+        .filter(node => node.getResource(name) !== null)
         .sort((a, b) => (<Resource>a.getResource(name)).amount - (<Resource>a.getResource(name)).amount);
 
       for(let [i, input] of inputs.entries()) {
@@ -264,10 +263,10 @@ export default class Machine {
   }
 
   /**
-   * Pulls up to a maximum of a resource out of a machine and returns the amount pulled.
+   * Pulls up to a maximum of a resource out of a node and returns the amount pulled.
    * @param name The name of the resource to pull
    * @param amount The maximum amount of the resource to pull
-   * @param simulate Simulate, don't actually remove resources from the source machine
+   * @param simulate Simulate, don't actually remove resources from the source node
    */
   public pullResource(name: string, amount: number, simulate: boolean = false): number {
     let resource = this.getResource(name);
@@ -314,68 +313,68 @@ export default class Machine {
 
   //#region node connections
   public clearConnections() {
-    for(let machine of this.outputs) {
-      this.removeOutput(machine);
+    for(let node of this.outputs) {
+      this.removeOutput(node);
     }
 
-    for(let machine of this.inputs) {
-      this.removeInput(machine);
+    for(let node of this.inputs) {
+      this.removeInput(node);
     }
   }
 
-  public hasOutput(machine: Machine) {
+  public hasOutput(node: Node) {
     for(let item of this.outputs) {
-      if(item.uuid == machine.uuid) return true;
+      if(item.uuid == node.uuid) return true;
     }
     return false;
   }
 
-  public addOutput(machine: Machine) {
-    if(this.uuid == machine.uuid || this.isGhost()) return;
-    if(!this.outputs.has(machine) && !machine.inputs.has(this)) {
-      this.outputs.add(machine);
-      machine.inputs.add(this);
+  public addOutput(node: Node) {
+    if(this.uuid == node.uuid || this.isGhost()) return;
+    if(!this.outputs.has(node) && !node.inputs.has(this)) {
+      this.outputs.add(node);
+      node.inputs.add(this);
     }
   }
 
-  public removeOutput(machine: Machine) {
-    this.outputs.delete(machine);
-    machine.inputs.delete(this);
+  public removeOutput(node: Node) {
+    this.outputs.delete(node);
+    node.inputs.delete(this);
   }
 
-  public toggleOutput(machine: Machine) {
-    if(this.hasOutput(machine)) {
-      this.removeOutput(machine);
+  public toggleOutput(node: Node) {
+    if(this.hasOutput(node)) {
+      this.removeOutput(node);
     } else {
-      this.addOutput(machine);
+      this.addOutput(node);
     }
   }
 
-  public hasInput(machine: Machine) {
+  public hasInput(node: Node) {
     for(let item of this.inputs) {
-      if(item.uuid == machine.uuid) return true;
+      if(item.uuid == node.uuid) return true;
     }
     return false;
   }
 
-  public addInput(machine: Machine) {
-    if(this.uuid == machine.uuid) return;
-    if(!this.inputs.has(machine) && !machine.outputs.has(this)) {
-      this.inputs.add(machine);
-      machine.outputs.add(this);
+  public addInput(node: Node) {
+    if(this.uuid == node.uuid) return;
+    if(!this.inputs.has(node) && !node.outputs.has(this)) {
+      this.inputs.add(node);
+      node.outputs.add(this);
     }
   }
 
-  public removeInput(machine: Machine) {
-    this.inputs.delete(machine);
-    machine.outputs.delete(this);
+  public removeInput(node: Node) {
+    this.inputs.delete(node);
+    node.outputs.delete(this);
   }
 
-  public toggleInput(machine: Machine) {
-    if(this.hasInput(machine)) {
-      this.removeInput(machine);
+  public toggleInput(node: Node) {
+    if(this.hasInput(node)) {
+      this.removeInput(node);
     } else {
-      this.addInput(machine);
+      this.addInput(node);
     }
   }
   //#endregion node connections
@@ -419,7 +418,7 @@ export default class Machine {
   //#endregion json
 
   /**
-   * Sets the current recipe the machine processes
+   * Sets the current recipe the node processes
    * @param name Internal name of the recipe
    */
   public setRecipe(name: string | null) {
@@ -437,13 +436,13 @@ export default class Machine {
     this.updateResources();
   }
 
-  public equals(machine: Machine | null) {
-    if(!(machine instanceof Machine)) return false;
-    return this.uuid === machine.uuid;
+  public equals(node: Node | null) {
+    if(!(node instanceof Node)) return false;
+    return this.uuid === node.uuid;
   }
 
   private updateResources() {
-    let info = <MachineMeta>getData(DataType.Machine, this.type);
+    let info = <NodeMeta>getData(DataType.Node, this.type);
     let resources = {
       ...(this.isGhost() ? info.ingredients : info.resources),
       ...(this.recipe !== null ? this.recipe.resources : {})

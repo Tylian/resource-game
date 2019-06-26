@@ -1,5 +1,5 @@
 import { RedomComponent, list, el, place, Place, setChildren, text, setAttr } from "redom";
-import Machine, { Resource } from "../Machine";
+import Node, { Resource } from "../Node";
 import { evt } from "./utils";
 
 import translate from "../i18n";
@@ -17,17 +17,17 @@ class ResourceItem implements RedomComponent {
 
 class ActivateButton implements RedomComponent {
   public el = el('button.manual', 'Activate');
-  private machine: Machine | null;
+  private node: Node | null;
   
   constructor() {
     this.el.addEventListener('click', (e) => {
-      if(this.machine !== null) {
-        this.machine.poke();
+      if(this.node !== null) {
+        this.node.poke();
       }
     });
   }
-  update(machine: Machine) {
-    this.machine = machine;
+  update(node: Node) {
+    this.node = node;
   }
 }
 
@@ -41,7 +41,7 @@ export default class InfoComponent implements RedomComponent {
   private recipeButtons = new Map<string, HTMLElement>();
   private resourceList = list('ul', ResourceItem);
 
-  private machine: Machine = null;
+  private node: Node = null;
   
   constructor(private engine: Engine) {
     this.el = el('div#infobox.hidden',
@@ -53,41 +53,41 @@ export default class InfoComponent implements RedomComponent {
       this.recipes = el('div.recipes')
     );
 
-    this.update(this.machine);
+    this.update(this.node);
   }
 
-  public update(machine: Machine | null) {
-    this.el.classList.toggle('hidden', machine == null);
+  public update(node: Node | null) {
+    this.el.classList.toggle('hidden', node == null);
 
-    if(machine !== null && !machine.equals(this.machine)) {
-      this.machine = machine;
-      this.title.textContent = i18n(`machine.${machine.type}`)
+    if(node !== null && !node.equals(this.node)) {
+      this.node = node;
+      this.title.textContent = i18n(`node.${node.type}`)
       this.recipeButtons.clear();
 
-      for(let recipe of machine.recipes) {
+      for(let recipe of node.recipes) {
         this.recipeButtons.set(recipe, el(
           'button',
           i18n(`recipe.${recipe}`),
-          evt({ 'click': e => { this.machine.setRecipe(recipe); }})
+          evt({ 'click': e => { this.node.setRecipe(recipe); }})
         ));
       }
 
       setChildren(this.recipes, [...this.recipeButtons.values()]);
     }
 
-    if(machine !== null)  {
+    if(node !== null)  {
       for(let [recipe, button] of this.recipeButtons) {
-        button.classList.toggle('active', this.machine.recipeName == recipe);
+        button.classList.toggle('active', this.node.recipeName == recipe);
         setAttr(button, { 'disabled': !this.engine.recipeUnlocked(recipe) });
       }
 
-      let update = [...this.machine.resources].map(([key, resource]) => ({
+      let update = [...this.node.resources].map(([key, resource]) => ({
           name: i18n(`resource.${key}`),
           ...resource
         })
       );
 
-      this.activate.update(machine.manual, machine);
+      this.activate.update(node.manual, node);
       this.resourceList.update(update);
     }
   }
