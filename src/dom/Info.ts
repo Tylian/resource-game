@@ -8,10 +8,17 @@ const i18n = translate('en-US');
 import "../style/info.scss";
 import Engine from "../Engine";
 
+class RecipeItem implements RedomComponent {
+  public el = el('li');
+  update([name, amount]: [string, number]) {
+    this.el.textContent = `${name}: ${amount}`;
+  }
+}
+
 class ResourceItem implements RedomComponent {
   public el = el('li');
-  update(data: Resource & { name: string }) {
-    this.el.textContent = `${data.name}: ${data.amount} / ${data.maximum}`;
+  update({name, amount, maximum}: Resource & { name: string }) {
+    this.el.textContent = `${name}: ${amount} / ${maximum}`;
   }
 }
 
@@ -31,15 +38,35 @@ class ActivateButton implements RedomComponent {
   }
 }
 
+class RecipeContainer implements RedomComponent {
+  public inputList = list('ul', RecipeItem);
+  public outputList = list('ul', RecipeItem);
+  public speed = text('');
+
+  public el = el('div',
+    el('h2', 'Recipe'),
+    el('b', 'Speed:'), this.speed, 
+    el('h3', 'Inputs'),
+    this.inputList,
+    el('h3', 'Outputs'),
+    this.outputList
+  );
+  update(node: Node) {
+    this.inputList.update(Object.entries(node.recipe.ingredients));
+    this.outputList.update(Object.entries(node.recipe.ingredients));
+  }
+}
+
 export default class InfoComponent implements RedomComponent {
   public el: HTMLElement;
 
   private title: Text;
   private activate: Place;
+  private recipe: Place;
   private recipes: HTMLElement;
 
   private recipeButtons = new Map<string, HTMLElement>();
-  private resourceList = list('ul', ResourceItem);
+  private resourceList = list('ul', ResourceItem, 'name');
 
   private node: Node = null;
   
@@ -50,7 +77,8 @@ export default class InfoComponent implements RedomComponent {
       el('h2', 'Resources'),
       this.resourceList,
       el('h2', 'Recipes'),
-      this.recipes = el('div.recipes')
+      this.recipes = el('div.recipes'),
+      this.recipe = place(RecipeContainer)
     );
 
     this.update(this.node);
@@ -86,6 +114,8 @@ export default class InfoComponent implements RedomComponent {
           ...resource
         })
       );
+
+      this.recipe.update(node.recipeName !== null && node.recipeName !== "ghost", node);
 
       this.activate.update(node.manual, node);
       this.resourceList.update(update);
