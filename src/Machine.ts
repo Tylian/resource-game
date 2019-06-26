@@ -7,7 +7,7 @@ const PI2 = Math.PI * 2;
 const nHalfPI = -Math.PI / 2;
 
 import { el, RedomComponent, list } from 'redom';
-import { getData, DataType, hasData, RecipeMeta, ResourceMap, ChanceRecipe } from './data';
+import { getData, DataType, hasData, RecipeMeta, ResourceMap, ChanceRecipe, MachineMeta } from './data';
 
 export interface InstanceData {
   x: number;
@@ -38,6 +38,21 @@ function pickRandom<T>(items: Array<T>, chances: Array<number>): T {
 
 function isChanceRecipe(recipe: RecipeMeta): recipe is ChanceRecipe {
   return Array.isArray(recipe.results);
+}
+
+function drawText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, fill = "black", stroke = "white") {
+  ctx.save()
+ 
+  ctx.fillStyle = stroke;
+  ctx.fillText(text, x - 1, y + 1);
+  ctx.fillText(text, x - 1, y - 1);
+  ctx.fillText(text, x + 1, y + 1);
+  ctx.fillText(text, x + 1, y - 1);
+
+  ctx.fillStyle = fill;
+  ctx.fillText(text, x, y);
+
+  ctx.restore();
 }
 
 export default class Machine {
@@ -112,12 +127,23 @@ export default class Machine {
   }
   //#endregion
 
-  public render(ctx: CanvasRenderingContext2D, color: string) {
+  public render(ctx: CanvasRenderingContext2D, focus: boolean) {
     ctx.save();
+
+    const mainColor = focus ? 'green' : 'black';
+    const accentColor = focus ? '#dfd' : 'white';
 
     if(this.isGhost()) {
       ctx.globalAlpha = 0.5;
     }
+
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = mainColor;
+    ctx.fillStyle = accentColor;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
     
     let recipePercent = this.progress !== null && this.recipeValid()
       ? this.progress / this.recipe.speed : 0;
@@ -138,7 +164,8 @@ export default class Machine {
 
     ctx.lineWidth = slice;
     for(let [name, resource] of this.resources) {
-      ctx.strokeStyle = `${getData(DataType.Resource, name).color}`;
+      let resData = getData(DataType.Resource, name);
+      ctx.strokeStyle = resData !== null ? resData.color : 'black';
       ctx.beginPath();
       ctx.arc(this.x, this.y, r - ctx.lineWidth / 2, nHalfPI, nHalfPI + PI2 * (resource.amount / resource.maximum));
       ctx.stroke();
@@ -146,31 +173,21 @@ export default class Machine {
       r -= slice;
     }
 
-    ctx.fillStyle = color;
-    ctx.strokeStyle = "white";
-    ctx.lineWidth = 3;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
 
-    if(this.recipe === null) {
-      ctx.font = "bold 12px monospaced";
-      ctx.strokeText(i18n(`machine.${this.type}`), this.x, this.y);
-      ctx.fillText(i18n(`machine.${this.type}`), this.x, this.y);
+    const lineHeight = 14;
+
+    if(this.recipe === null || this.isGhost()) {
+      ctx.font = "bold 9px sans-serif";
+      drawText(ctx, i18n(`machine.${this.type}`), this.x, this.y, mainColor, accentColor);
     } else {
-      ctx.font = "bold 12px monospaced";
-      ctx.strokeText(i18n(`machine.${this.type}`), this.x, this.y - 6);
-      ctx.fillText(i18n(`machine.${this.type}`), this.x, this.y - 5);
-      
-      ctx.font = "12px monospaced";
-      ctx.strokeText(i18n(`recipe.${this.isGhost() ? "ghost" : this.recipeName}`), this.x, this.y + 6);
-      ctx.fillText(i18n(`recipe.${this.isGhost() ? "ghost" : this.recipeName}`), this.x, this.y + 7);
+      ctx.font = "bold 9px sans-serif";
+      drawText(ctx, i18n(`machine.${this.type}`), this.x, this.y - lineHeight / 2, mainColor, accentColor);
+      ctx.font = "9px sans-serif";
+      drawText(ctx, i18n(`recipe.${this.isGhost() ? "ghost" : this.recipeName}`), this.x, this.y + lineHeight / 2, mainColor, accentColor);
     }
 
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = color;
-    ctx.beginPath();
-    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-    ctx.stroke();
     ctx.restore();
   }
 
@@ -214,12 +231,13 @@ export default class Machine {
      // resources
      for(let [name, amount] of this.getPullResources()) {
       let remaining = amount;
-      let resource = this.resources.get(name);
-      for(let input of this.inputs) {
-        if(!this.recipeValid() && input.hasInput(this) && input.resources.has(name))
-          continue;
+      let resource = <Resource>this.getResource(name);
+      let inputs = [...this.inputs]
+        .filter(machine => machine.getResource(name) !== null)
+        .sort((a, b) => (<Resource>a.getResource(name)).amount - (<Resource>a.getResource(name)).amount);
 
-        let pulled = input.pullResource(name, remaining);
+      for(let [i, input] of inputs.entries()) {
+        let pulled = input.pullResource(name, Math.ceil(remaining / (inputs.length - i)));
         if(pulled > 0) {
           resource.amount += pulled;
           remaining -= pulled;
@@ -227,22 +245,6 @@ export default class Machine {
         
         if(remaining <= 0) {
           break;
-        }
-      }
-    }
-
-    // balance
-    for(let [name] of this.getPullResources()) {
-      let resource = this.resources.get(name);
-      for(let input of this.inputs) {
-        if(!this.recipeValid() && input.hasInput(this) && input.resources.has(name)) {
-          let difference = input.resources.get(name).amount - resource.amount; 
-          if(difference > 0) {
-            let pulled = input.pullResource(name, Math.min(difference / 2, resource.maximum - resource.amount));
-            if(pulled > 0) {
-              resource.amount += pulled;
-            }
-          }
         }
       }
     }
@@ -273,9 +275,7 @@ export default class Machine {
       return 0;
     }
 
-    let resource = this.resources.get(name);
     let available = Math.floor(Math.min(resource.amount, amount));
-
     if(!simulate) {
       resource.amount -= available;
     }
@@ -424,12 +424,12 @@ export default class Machine {
    */
   public setRecipe(name: string | null) {
     if(name !== "ghost") {
-    if(this.isGhost() && name !== null) {
-      throw new ReferenceError(`${name} is not a valid recipe on a ghost ${this.type}`);
-    }
-    if(name !== null && !this.recipes.includes(name)) {
-      throw new ReferenceError(`${name} is not a valid recipe on a ${this.type}`);
-    }
+      if(this.isGhost() && name !== null) {
+        throw new ReferenceError(`${name} is not a valid recipe on a ghost ${this.type}`);
+      }
+      if(name !== null && !this.recipes.includes(name)) {
+        throw new ReferenceError(`${name} is not a valid recipe on a ${this.type}`);
+      }
     }
 
     this.recipeName = name;
@@ -541,9 +541,9 @@ export default class Machine {
       for(let [name, amount] of Object.entries(this.recipe.ingredients)) {
         let resource = this.getResource(name);
         if(resource !== null) {
-        yield [name, Math.max(0, Math.min(Math.ceil(amount * 2 - resource.amount), resource.maximum))];
+          yield [name, Math.max(0, Math.min(Math.ceil(amount * 2 - resource.amount), resource.maximum))];
+        }
       }
     }
   }
-}
 }

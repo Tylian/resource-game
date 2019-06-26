@@ -28,11 +28,11 @@ window.addEventListener("resize", e => {
 (<HTMLElement>document.querySelector('#load')).addEventListener('click', () => {
   let save = prompt("Enter a save string:", "");
   if(save) {
-  try {
-    engine.fromJson(JSON.parse(save));
-  } catch(e) {
-    alert("Could not load save, maybe it's invalid?\n\n" + e);
-  }
+    try {
+      engine.fromJson(JSON.parse(save));
+    } catch(e) {
+      alert("Could not load save, maybe it's invalid?\n\n" + e);
+    }
   }
 });
 
@@ -40,7 +40,7 @@ if(process.env.NODE_ENV != 'development') {
   const render = () => {
     engine.render();
     requestAnimationFrame(render);
-};
+  };
 
   setInterval(() => { engine.tick(); }, 1000 / 20);
   render();
@@ -65,10 +65,10 @@ if(process.env.NODE_ENV != 'development') {
     engine.tick(); tpsStats.update();
   }, 1000 / 20);
   
-const render = () => {
+  const render = () => {
     engine.render(); fpsStats.update();
-  requestAnimationFrame(render);
-};
+    requestAnimationFrame(render);
+  };
   render();
 
   if(module.hot) {
@@ -82,14 +82,14 @@ const render = () => {
   
       engine.fromJson(save);
     });
-}
+  }
 
-// debug exports
-let exports = {
-  engine: engine,
-}
+  // debug exports
+  let exports = {
+    engine: engine,
+  }
 
-for(let [key, value] of Object.entries(exports)) {
-  (window as any)[key] = value;
-}
+  for(let [key, value] of Object.entries(exports)) {
+    (window as any)[key] = value;
+  }
 }

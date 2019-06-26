@@ -1,7 +1,6 @@
 import Machine, { InstanceData } from "./Machine";
 import * as redom from 'redom';
 
-import translate from './i18n';
 import InfoComponent from "./dom/Info";
 import { listData, DataType, getData, MachineMeta } from "./data";
 import ToolboxComponent from "./dom/Toolbox";
@@ -32,12 +31,17 @@ interface Point {
   y: number;
 }
 
+interface Camera {
+  x: number;
+  y: number;
+  zoom: number;
+}
 
 const Konami: number[] = [13, 65, 66, 39, 37, 39, 37, 40, 40, 38, 38];
 
 export default class Engine {
   public machines = new Map<string, Machine>();
-  public camera: Point = { x: 0, y: 0 };
+  public camera: Camera = { x: 0, y: 0, zoom: 1 };
   public cameraOffset: Point = { x: 0, y: 0 }
 
   private dragMode: DragMode = DragMode.None;
@@ -53,7 +57,7 @@ export default class Engine {
   private toolboxNode: ToolboxComponent;
 
   private seenResources = new Set<string>();
-  
+
   private debug = false;
   private konami: number[] = [];
   
@@ -108,7 +112,7 @@ export default class Engine {
         this.dragOrigin = {
           x: e.clientX,
           y: e.clientY
-      }
+        }
       } 
     });
     canvas.addEventListener("mousemove", (e) => {
@@ -222,20 +226,35 @@ export default class Engine {
     this.ctx.fillStyle = 'white';
     this.ctx.fillRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
     this.ctx.translate(-(this.camera.x + this.cameraOffset.x), -(this.camera.y + this.cameraOffset.y));
-    for(let [uuid, machine] of this.machines) {
-      machine.render(this.ctx, machine.equals(this.machineFocus) ? 'green' : 'black');
-    }
-
-    // XXX Can't combine with above loop because it renders under stuff
+    
     for(let [uuid, machine] of this.machines) {
       for(let output of machine.outputs) {
-        machine.drawOutputLine(this.ctx, output, machine.equals(this.machineFocus) ? 'green' : 'black');
+        if(!(machine.equals(this.machineFocus) || machine.equals(this.mouseMachine))) {
+          machine.drawOutputLine(this.ctx, output, 'rgba(0, 0, 0, 0.5)');
+        }
+      }
+    }
+    
+    for(let [uuid, machine] of this.machines) {
+      machine.render(this.ctx, machine.equals(this.machineFocus));
+    }
+
+    if(this.mouseMachine !== null && !this.mouseMachine.equals(this.machineFocus)) {
+      for(let output of this.mouseMachine.outputs) {
+        this.mouseMachine.drawOutputLine(this.ctx, output, 'black');
       }
     }
 
+    if(this.machineFocus !== null) {
+      for(let output of this.machineFocus.outputs) {
+        this.machineFocus.drawOutputLine(this.ctx, output, 'green');
+      }
+    }
+
+    // XXX Can't combine with above loop because it renders under stuff
     if(this.tempMachine !== null) {
       this.ctx.globalAlpha = 0.5;
-      this.tempMachine.render(this.ctx, "black");
+      this.tempMachine.render(this.ctx, false);
       this.ctx.globalAlpha = 1;
     }
   }
@@ -283,7 +302,7 @@ export default class Engine {
 
   public getMachine(uuid: string): Machine | undefined {
     return this.machines.get(uuid);
-    }
+  }
 
   public debugMode() {
     console.log('Debug mode enabled');
