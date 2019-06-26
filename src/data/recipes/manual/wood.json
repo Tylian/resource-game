@@ -1,10 +1,10 @@
 {
-  "speed": 50,
+  "speed": 20,
   "ingredients": {},
   "resources": {
-    "iron-ore": 10
+    "wood": 10
   },
   "results": {
-    "iron-ore": 1
+    "wood": 1
   }
 }

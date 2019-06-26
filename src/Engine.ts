@@ -283,9 +283,14 @@ export default class Engine {
         }
 
         if(node !== null) {
-          this.focusNode = node;
+          if(e.shiftKey) {
+            node.poke();
+          } else {
+            this.focusNode = node;
+          }
         } else if(this.focusNode !== null) {
           this.focusNode = null;
+          this.infoboxElem.update(this.focusNode);
         }
 
         break;

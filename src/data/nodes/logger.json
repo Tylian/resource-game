@@ -1,5 +1,5 @@
 {
-  "radius": 60,
+  "radius": 45,
   "category": "resources",
   "ingredients": {
     "copper-ingot": 1,
@@ -8,9 +8,6 @@
   "resources": {},
   "buildtime": 100,
   "recipes": [
-    "miner/stone",
-    "miner/coal",
-    "miner/iron",
-    "miner/copper"
+    "miner/wood"
   ]
 }

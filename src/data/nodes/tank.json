@@ -2,12 +2,11 @@
   "radius": 40,
   "category": "storage",
   "ingredients": {
-    "iron-ingot": 5
+    "iron-ingot": 2
   },
   "buildtime": 10,
-  "resources": {},
   "recipes": [
-    "tank-water",
-    "tank-steam"
+    "tank/water",
+    "tank/steam"
   ]
 }

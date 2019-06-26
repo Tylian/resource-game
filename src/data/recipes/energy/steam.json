@@ -5,9 +5,9 @@
   },
   "resources": {
     "steam": 3000,
-    "energy": 1500
+    "energy": 2500
   },
   "results": {
-    "energy": 150
+    "energy": 250
   }
 }

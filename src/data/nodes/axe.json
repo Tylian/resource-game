@@ -2,6 +2,6 @@
   "buildtime": 30,
   "manual": true,
   "recipes": [
-    "manual-wood"
+    "manual/wood"
   ]
 }

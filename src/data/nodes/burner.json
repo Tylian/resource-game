@@ -1,13 +1,13 @@
 {
-  "radius": 40,
+  "radius": 45,
   "category": "generators",
   "ingredients": {
-    "stone": 2,
+    "stone": 4,
     "coal": 1,
-    "iron-ingot": 5
+    "iron-ingot": 2
   },
-  "buildtime": 80,
+  "buildtime": 60,
   "recipes": [
-    "boil-water"
+    "energy/coal"
   ]
 }

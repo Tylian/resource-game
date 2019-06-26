@@ -1,0 +1,10 @@
+{
+  "speed": 40,
+  "ingredients": {},
+  "resources": {
+    "copper-ore": 10
+  },
+  "results": {
+    "copper-ore": 1
+  }
+}

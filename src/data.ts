@@ -52,9 +52,9 @@ export const enum DataType {
 }
 
 const requireMap = {
-  [DataType.Node]: require.context('./data/nodes/', false, /\.json$/),
-  [DataType.Recipe]: require.context('./data/recipes/', false, /\.json$/),
-  [DataType.Resource]: require.context('./data/resources/', false, /\.json$/),
+  [DataType.Node]: require.context('./data/nodes/', true, /\.json$/),
+  [DataType.Recipe]: require.context('./data/recipes/', true, /\.json$/),
+  [DataType.Resource]: require.context('./data/resources/', true, /\.json$/),
 };
 
 type DefaultMap = {[DataType.Node]: NodeMeta, [DataType.Recipe]: RecipeMeta, [DataType.Resource]: ResourceMeta}
@@ -71,19 +71,10 @@ const defaultMap: DefaultMap = {
   },
   [DataType.Recipe]: {
     "key": "default",
-    "speed": 1,
-    "ingredients": {
-      "water": 60,
-      "coal": 0.015
-    },
-    "resources": {
-      "water": 12000,
-      "coal": 20,
-      "steam": 12000
-    },
-    "results": {
-      "steam": 60
-    }
+    "speed": 0,
+    "ingredients": {},
+    "resources": {},
+    "results": {}
   },
   [DataType.Resource]: { "key": "default", "color": "black" }
 };
@@ -114,7 +105,7 @@ export function getData(type: DataType, id: string | null | undefined): UnknownM
 
   return {
     ...defaultMap[type],
-    key: id,
-    ...requireMap[type](`./${id}.json`)
+    ...requireMap[type](`./${id}.json`),
+    key: id
   };
 }

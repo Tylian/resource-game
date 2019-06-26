@@ -10,9 +10,9 @@ import "../style/infobox.scss";
 
 function siPrefix(n: number) {
   if(n > 1000) {
-    return `${n / 1000}M`;
+    return `${n / 1000} M`;
   } else if(n > 1) {
-    return `${n}k`
+    return `${n} k`
   }
   return (n * 1000).toString();
 }

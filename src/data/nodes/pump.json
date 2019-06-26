@@ -2,9 +2,8 @@
   "radius": 25,
   "category": "resources",
   "ingredients": {
-    "iron-ingot": 3
+    "iron-ingot": 2
   },
-  "resources": {},
   "buildtime": 30,
   "recipes": [
     "pump-water"

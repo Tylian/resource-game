@@ -2,7 +2,8 @@
   "radius": 40,
   "category": "storage",
   "ingredients": {
-    "iron-ingot": 2,
+    "iron-ingot": 1,
+    "copper-ingot": 4,
     "coal": 1
   },
   "buildtime": 15,

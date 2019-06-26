@@ -1,0 +1,13 @@
+{
+  "speed": 10,
+  "ingredients": {
+    "energy": 180
+  },
+  "resources": {
+    "wood": 20,
+    "energy": 900
+  },
+  "results": {
+    "wood": 1
+  }
+}
