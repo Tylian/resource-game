@@ -1,8 +1,9 @@
-import Node, { InstanceData } from "./Node";
 import * as redom from 'redom';
 
-import InfoComponent from "./dom/Info";
 import { listData, DataType, getData, NodeMeta } from "./data";
+import Node, { InstanceData } from "./Node";
+
+import InfoboxComponent from "./dom/Infobox";
 import ToolboxComponent from "./dom/Toolbox";
 
 const enum DragMode {
@@ -53,7 +54,7 @@ export default class Engine {
   private mouseNode: Node | null = null;
   private focusNode: Node | null = null;
 
-  private infoboxElem: InfoComponent;
+  private infoboxElem: InfoboxComponent;
   private toolboxElem: ToolboxComponent;
 
   private seenResources = new Set<string>();
@@ -158,7 +159,7 @@ export default class Engine {
       return false;
     });
 
-    this.infoboxElem = new InfoComponent(this);
+    this.infoboxElem = new InfoboxComponent(this);
   }
 
   public mountInfobox(container: HTMLElement) {

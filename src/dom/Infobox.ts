@@ -1,17 +1,30 @@
 import { RedomComponent, list, el, place, Place, setChildren, text, setAttr } from "redom";
+import Engine from "../Engine";
 import Node, { Resource } from "../Node";
 import { evt } from "./utils";
 
 import translate from "../i18n";
 const i18n = translate('en-US');
 
-import "../style/info.scss";
-import Engine from "../Engine";
+import "../style/infobox.scss";
+
+function siPrefix(n: number) {
+  if(n > 1000) {
+    return `${n / 1000}M`;
+  } else if(n > 1) {
+    return `${n}k`
+  }
+  return (n * 1000).toString();
+}
 
 class RecipeItem implements RedomComponent {
   public el = el('li');
-  update([name, amount]: [string, number]) {
-    this.el.textContent = `${name}: ${amount}`;
+  update({ name, amount, speed }: { name: string, amount: number, speed: number }) {
+    if(name == "energy") {
+      this.el.textContent = `${i18n(`resource.${name}`)}: ${siPrefix(amount)}W (${siPrefix(speed)}J)`;
+    } else {
+      this.el.textContent = `${i18n(`resource.${name}`)}: ${amount} (${speed}/s)`;
+    }
   }
 }
 
@@ -45,21 +58,23 @@ class RecipeContainer implements RedomComponent {
 
   public el = el('div',
     el('h2', 'Recipe'),
-    el('b', 'Speed:'), this.speed, 
+    el('b', 'Speed: '), this.speed, 
     el('h3', 'Inputs'),
     this.inputList,
     el('h3', 'Outputs'),
     this.outputList
   );
   update(node: Node) {
-    this.inputList.update(Object.entries(node.recipe.ingredients));
-    this.outputList.update(Object.entries(node.recipe.ingredients));
+    let perSec = 20 / node.recipe.speed;
+    this.speed.textContent = ` ${node.recipe.speed / 20}s per (${perSec}/s)`
+    this.inputList.update(Object.entries(node.recipe.ingredients)
+      .map(([name, amount]) => ({ name, amount, speed: amount * perSec })));
+    this.outputList.update(Object.entries(node.recipe.results)
+      .map(([name, amount]) => ({ name, amount, speed: amount * perSec })));
   }
 }
 
-export default class InfoComponent implements RedomComponent {
-  public el: HTMLElement;
-
+export default class InfoboxComponent implements RedomComponent {
   private title: Text;
   private activate: Place;
   private recipe: Place;
@@ -68,19 +83,18 @@ export default class InfoComponent implements RedomComponent {
   private recipeButtons = new Map<string, HTMLElement>();
   private resourceList = list('ul', ResourceItem, 'name');
 
+  public el = el('div#infobox.hidden',
+    el('h1', this.title = text('')),
+    this.activate = place(ActivateButton),
+    el('h2', 'Resources'),
+    this.resourceList,
+    this.recipes = el('div.recipes'),
+    this.recipe = place(RecipeContainer)
+  );
+
   private node: Node = null;
   
   constructor(private engine: Engine) {
-    this.el = el('div#infobox.hidden',
-      el('h1', this.title = text('')),
-      this.activate = place(ActivateButton),
-      el('h2', 'Resources'),
-      this.resourceList,
-      el('h2', 'Recipes'),
-      this.recipes = el('div.recipes'),
-      this.recipe = place(RecipeContainer)
-    );
-
     this.update(this.node);
   }
 
@@ -100,10 +114,14 @@ export default class InfoComponent implements RedomComponent {
         ));
       }
 
-      setChildren(this.recipes, [...this.recipeButtons.values()]);
+      setChildren(this.recipes, [
+        el('h2', 'Recipes'),
+        ...this.recipeButtons.values()
+      ]);
     }
 
     if(node !== null)  {
+      this.recipes.classList.toggle('hidden', node.isGhost());
       for(let [recipe, button] of this.recipeButtons) {
         button.classList.toggle('active', this.node.recipeName == recipe);
         setAttr(button, { 'disabled': !this.engine.recipeUnlocked(recipe) });
