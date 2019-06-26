@@ -6,3 +6,5 @@ node_modules/
 # build artifacts
 dist
 .cache
+
+save.json
