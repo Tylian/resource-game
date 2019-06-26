@@ -29,7 +29,10 @@
     "webpack-dev-server": "^3.7.1"
   },
   "dependencies": {
+    "@types/stats.js": "^0.17.0",
     "redom": "^3.23.1",
+    "rstatsjs": "^1.0.1",
+    "stats.js": "^0.17.0",
     "uuid": "^3.3.2"
   }
 }

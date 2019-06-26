@@ -1,4 +1,5 @@
 import Engine from "./Engine";
+import Stats, { Panel } from "./debug";
 
 import "./style/style.scss";
 
@@ -33,22 +34,53 @@ document.querySelector('#load').addEventListener('click', () => {
   }
 });
 
-const update = () => {
-  engine.tick();
-  setTimeout(update, 50);
+if(process.env.NODE_ENV != 'development') {
+  const render = () => {
+    engine.render();
+    requestAnimationFrame(render);
 };
 
+  setInterval(() => { engine.tick(); }, 1000 / 20);
+  render();
+} else {
+  const fpsStats = new Stats();
+  const tpsStats = new Stats(
+    new Panel('TPS', '#ff8', '#221'),
+    new Panel('tick', '#f8f', '#212')
+  );
+  fpsStats.showPanel(0);
+  fpsStats.showPanel(1);
+
+  tpsStats.showPanel(0);
+  tpsStats.showPanel(1);
+
+  fpsStats.dom.style.left = "145px";
+  tpsStats.dom.style.left = "230px";
+  document.body.appendChild(fpsStats.dom);
+  document.body.appendChild(tpsStats.dom);
+
+  setInterval(() => {
+    engine.tick(); tpsStats.update();
+  }, 1000 / 20);
+  
 const render = () => {
-  engine.render();
+    engine.render(); fpsStats.update();
   requestAnimationFrame(render);
 };
+  render();
 
-if(window.location.search.length > 0) {
-  let save = window.location
+  if(module.hot) {
+    module.hot.accept('./Engine', function() {
+      console.log('Engine updated, reloading');
+      let save = engine.toJson();
+  
+      engine = new Engine(canvas);
+      engine.mountInfobox(<HTMLElement>document.querySelector("#infobox"));
+      engine.mountToolbox(<HTMLElement>document.querySelector("#toolbox"));
+  
+      engine.fromJson(save);
+    });
 }
-
-update();
-render();
 
 // debug exports
 let exports = {
@@ -57,4 +89,5 @@ let exports = {
 
 for(let [key, value] of Object.entries(exports)) {
   (window as any)[key] = value;
+}
 }
