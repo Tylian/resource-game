@@ -2,7 +2,7 @@
   "speed": 0,
   "ingredients": {},
   "resources": {
-    "steam": 40000
+    "steam": 100000
   },
   "results": {}
 }

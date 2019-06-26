@@ -57,7 +57,38 @@ const requireMap = {
   [DataType.Resource]: require.context('./data/resources/', false, /\.json$/),
 };
 
-export function listData(type: DataType) {
+type DefaultMap = {[DataType.Machine]: MachineMeta, [DataType.Recipe]: RecipeMeta, [DataType.Resource]: ResourceMeta}
+const defaultMap: DefaultMap = {
+  [DataType.Machine]: {
+    "key": "default",
+    "category": "basic",
+    "radius": 30,
+    "resources": {},
+    "ingredients": {},
+    "buildtime": 20,
+    "manual": false,
+    "recipes": []
+  },
+  [DataType.Recipe]: {
+    "key": "default",
+    "speed": 1,
+    "ingredients": {
+      "water": 60,
+      "coal": 0.015
+    },
+    "resources": {
+      "water": 12000,
+      "coal": 20,
+      "steam": 12000
+    },
+    "results": {
+      "steam": 60
+    }
+  },
+  [DataType.Resource]: { "key": "default", "color": "black" }
+};
+
+export function listData(type: DataType): string[] {
   if(requireMap[type] === undefined) {
     throw new ReferenceError(`Unknown data type ${type}`);
   }
@@ -65,7 +96,7 @@ export function listData(type: DataType) {
   return requireMap[type].keys().map(key => key.slice(2, key.length - 5));
 }
 
-export function hasData(type: DataType, id: string): boolean {
+export function hasData(type: DataType, id: string | null | undefined): boolean {
   if(requireMap[type] === undefined) {
     throw new ReferenceError(`Unknown data type ${type}`);
   }
@@ -73,15 +104,16 @@ export function hasData(type: DataType, id: string): boolean {
   return requireMap[type].keys().includes(`./${id}.json`);
 }
 
-export function getData(type: DataType.Machine, id: string): MachineMeta;
-export function getData(type: DataType.Recipe, id: string): RecipeMeta;
-export function getData(type: DataType.Resource, id: string): ResourceMeta;
-export function getData(type: DataType, id: string): UnknownMeta {
+export function getData(type: DataType.Machine, id: string | null | undefined): MachineMeta | null;
+export function getData(type: DataType.Recipe, id: string | null | undefined): RecipeMeta | null;
+export function getData(type: DataType.Resource, id: string | null | undefined): ResourceMeta | null;
+export function getData(type: DataType, id: string | null | undefined): UnknownMeta | null {
   if(!hasData(type, id)) {
-    throw new ReferenceError(`Unknown data type ${type} ${id}`);
+    return null;
   }
 
   return {
+    ...defaultMap[type],
     key: id,
     ...requireMap[type](`./${id}.json`)
   };

@@ -3,7 +3,7 @@ import * as redom from 'redom';
 
 import translate from './i18n';
 import InfoComponent from "./dom/Info";
-import { listData, DataType, getData } from "./data";
+import { listData, DataType, getData, MachineMeta } from "./data";
 import ToolboxComponent from "./dom/Toolbox";
 
 const enum DragMode {
@@ -44,10 +44,11 @@ export default class Engine {
   private dragOrigin: Point = { x: 0, y: 0 };
   private dragOffset: Point = { x: 0, y: 0 };
 
-  private machineTarget: Machine = null;
-  private tempMachine: Machine = null;
+  private machineTarget: Machine | null = null;
+  private tempMachine: Machine | null = null;
+  private mouseMachine: Machine | null = null;
 
-  private machineFocus: Machine = null;
+  private machineFocus: Machine | null = null;
   private infoNode: InfoComponent;
   private toolboxNode: ToolboxComponent;
 
@@ -56,6 +57,7 @@ export default class Engine {
   private debug = false;
   private konami: number[] = [];
   
+  constructor(public canvas: HTMLCanvasElement, public ctx = canvas.getContext("2d", { alpha: false }) as CanvasRenderingContext2D) {
     document.addEventListener('keyup', (e) => {
       let key = e.which || e.keyCode;
       
@@ -160,7 +162,7 @@ export default class Engine {
   }
 
   public mountToolbox(container: HTMLElement) {
-    this.toolboxNode = new ToolboxComponent(this, listData(DataType.Machine).map(key => getData(DataType.Machine, key)));
+    this.toolboxNode = new ToolboxComponent(this, listData(DataType.Machine).map(key => <MachineMeta>getData(DataType.Machine, key)));
     redom.mount(document.body, this.toolboxNode, container, true);
   }
 
@@ -172,6 +174,10 @@ export default class Engine {
 
   public machineUnlocked(id: string): boolean {
     if(this.debug) return true;
+
+    const data = getData(DataType.Machine, id);
+    if(data === null) return false;
+    for(let ingredient of Object.keys(data.ingredients)) {
       if(!this.seenResources.has(ingredient)) {
         return false;
       }
@@ -227,7 +233,7 @@ export default class Engine {
       }
     }
 
-    if(this.tempMachine) {
+    if(this.tempMachine !== null) {
       this.ctx.globalAlpha = 0.5;
       this.tempMachine.render(this.ctx, "black");
       this.ctx.globalAlpha = 1;
@@ -275,9 +281,8 @@ export default class Engine {
     }
   }
 
-  public fillMachine() {
-    for(let [key, resource] of this.machineFocus.resources) {
-      resource.amount = resource.maximum;
+  public getMachine(uuid: string): Machine | undefined {
+    return this.machines.get(uuid);
     }
 
   public debugMode() {
@@ -294,22 +299,20 @@ export default class Engine {
     this.camera.y = data.camera.y;
 
     this.seenResources = new Set(data.seenResources);
-
     // create machines
     for(let [uuid, info] of Object.entries(data.machines)) {
       let machine = new Machine(info.type, uuid);
       this.machines.set(machine.uuid, machine);
       machine.loadJson(info);
-      
     }
 
-    console.log('created');
-
     // load all data
-    for(let [uuid, info] of Object.entries(data.machines)) {
-      let machine = this.machines.get(uuid);
-      info.outputs.forEach(uuid => {
-        machine.addOutput(this.machines.get(uuid));
+    for(let [uuid, machine] of this.machines) {
+      data.machines[uuid].outputs.forEach(uuid => {
+        let output = this.machines.get(uuid);
+        if(output !== undefined) {
+          machine.addOutput(output);
+        }
       });
     }
 

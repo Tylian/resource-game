@@ -14,7 +14,7 @@ export interface InstanceData {
   y: number;
   outputs: string[];
   recipe: string | null;
-  resources?: ResourceMap;
+  resources: ResourceMap;
   progress?: number;
 }
 
@@ -28,12 +28,12 @@ export interface RecipeProgress {
   ingredients: ResourceMap;
 }
 
-function pickRandom<T>(items: Array<T>, chances: Array<number>) {
+function pickRandom<T>(items: Array<T>, chances: Array<number>): T {
   let sum = chances.reduce((acc, el) => acc + el, 0);
   let acc = 0;
   chances = chances.map(el => (acc = el + acc));
   let rand = Math.random() * sum;
-  return items.find((el, i) => chances[i] > rand);
+  return items.find((el, i) => chances[i] > rand) as T;
 }
 
 function isChanceRecipe(recipe: RecipeMeta): recipe is ChanceRecipe {
@@ -51,11 +51,11 @@ export default class Machine {
   public resources = new Map<string, Resource>();
 
   public progress: number | null = null;
-  public recipeName = '';
+  public recipeName: string | null = '';
 
   //#region convenience getters
   public get data() {
-    return getData(DataType.Machine, this.type);
+    return getData(DataType.Machine, this.type) as MachineMeta;
   }
 
   public get manual() {
@@ -74,7 +74,7 @@ export default class Machine {
     return this.data.recipes.length > 0;
   }
 
-  public get recipe(): RecipeMeta {
+  public get recipe(): RecipeMeta | null {
     if(this.isGhost()) {
       return {
         key: "ghost",
@@ -104,13 +104,11 @@ export default class Machine {
   }
 
   public setGhost(ghost: boolean) {
-    this.recipeName = ghost ? "ghost" : null;
-    this.progress = null;
-
     this.clearConnections();
-
     this.resources.clear();
-    this.updateResources();
+
+    this.recipeName = null; // XXX remove ghost so setRecipe works
+    this.setRecipe(ghost ? "ghost" : (this.recipes.length == 1 ? this.recipes[0] : null));
   }
   //#endregion
 
@@ -270,7 +268,8 @@ export default class Machine {
    * @param simulate Simulate, don't actually remove resources from the source machine
    */
   public pullResource(name: string, amount: number, simulate: boolean = false): number {
-    if(!this.resources.has(name)) {
+    let resource = this.getResource(name);
+    if(resource == null) {
       return 0;
     }
 
@@ -282,6 +281,35 @@ export default class Machine {
     }
 
     return available;
+  }
+
+  public getResource(name: string): Resource | null {
+    let resource = this.resources.get(name) 
+    return resource == undefined ? null : resource;
+  }
+
+  public setResource(name: string, value = 0, maximum = Infinity): void {
+    this.resources.set(name, {
+      amount: value,
+      maximum: maximum
+    }); 
+  }
+
+
+  public setResourceAmount(name: string, value: number): void {
+    let resource = this.resources.get(name); 
+    if(resource !== undefined) {
+      resource.amount = value;
+    }
+  }
+
+  public getResourceAmount(name: string, strict?: false): number
+  public getResourceAmount(name: string, strict?: true): number | null
+  public getResourceAmount(name: string, strict: boolean = false): number | null {
+    let resource = this.resources.get(name);
+    return resource === undefined
+      ? (strict ? null : 0)
+      : resource.amount;
   }
 
   //#region node connections
@@ -380,9 +408,9 @@ export default class Machine {
       this.setRecipe(save.recipe);
     }
     
-    Object.entries(save.resources).forEach(([key, value]) => {
-      this.resources.get(key).amount = value;
-    });
+    for(let [key, value] of Object.entries(save.resources)) {
+      this.setResourceAmount(key, value)
+    };
 
     this.progress = save.progress !== null && save.progress !== undefined
       ? save.progress
@@ -395,32 +423,35 @@ export default class Machine {
    * @param name Internal name of the recipe
    */
   public setRecipe(name: string | null) {
+    if(name !== "ghost") {
     if(this.isGhost() && name !== null) {
       throw new ReferenceError(`${name} is not a valid recipe on a ghost ${this.type}`);
     }
     if(name !== null && !this.recipes.includes(name)) {
       throw new ReferenceError(`${name} is not a valid recipe on a ${this.type}`);
     }
+    }
 
     this.recipeName = name;
+    this.progress = null;
     this.updateResources();
   }
 
-  public equals(machine: Machine) {
+  public equals(machine: Machine | null) {
     if(!(machine instanceof Machine)) return false;
     return this.uuid === machine.uuid;
   }
 
   private updateResources() {
-    let info = getData(DataType.Machine, this.type);
+    let info = <MachineMeta>getData(DataType.Machine, this.type);
     let resources = {
       ...(this.isGhost() ? info.ingredients : info.resources),
       ...(this.recipe !== null ? this.recipe.resources : {})
     };
 
     for(let [name, maximum] of Object.entries(resources)) {
-      if(this.resources.has(name)) {
-        let resource = this.resources.get(name);
+      let resource = this.getResource(name);
+      if(resource !== null) {
         resource.amount = Math.min(resource.amount, maximum);
         resource.maximum = maximum;
       } else {
@@ -449,14 +480,14 @@ export default class Machine {
     if(!this.recipeValid()) return false;
 
     for(let [name, amount] of Object.entries(this.recipe.ingredients)) {
-      if(this.resources.get(name).amount < amount) {
+      if(this.getResourceAmount(name) < amount) {
         return false;
       }
     }
 
     for(let [name, amount] of Object.entries(this.recipe.results)) {
-      let resource = this.resources.get(name);
-      if(resource.amount + amount > resource.maximum) {
+      let resource = this.getResource(name);
+      if(resource !== null && resource.amount + amount > resource.maximum) {
         return false;
       }
     }
@@ -475,9 +506,8 @@ export default class Machine {
 
       this.progress = 0;
       for(let [name, amount] of Object.entries(this.recipe.ingredients)) {
-        this.resources.get(name).amount -= amount;
-        // XXX js floating point shit ...
-        this.resources.get(name).amount = Math.round(this.resources.get(name).amount / amount) * amount;
+        let newAmount = Math.round((this.getResourceAmount(name) - amount) / amount) * amount;
+        this.setResourceAmount(name, newAmount);
       }
     }
     
@@ -493,7 +523,7 @@ export default class Machine {
             : this.recipe.results;
 
           for(let [name, amount] of Object.entries(result)) {
-            this.resources.get(name).amount += amount;
+            this.setResourceAmount(name, this.getResourceAmount(name) + amount);
           }
         }
         
@@ -509,9 +539,11 @@ export default class Machine {
       }
     } else {
       for(let [name, amount] of Object.entries(this.recipe.ingredients)) {
-        let resource = this.resources.get(name);
+        let resource = this.getResource(name);
+        if(resource !== null) {
         yield [name, Math.max(0, Math.min(Math.ceil(amount * 2 - resource.amount), resource.maximum))];
       }
     }
   }
+}
 }

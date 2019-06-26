@@ -7,10 +7,10 @@ import translate from './i18n';
 const i18n = translate('en-US');
 
 const canvas = <HTMLCanvasElement>document.querySelector("#game");
-const engine = new Engine(canvas);
+let engine = new Engine(canvas);
 
-engine.mountInfobox(document.querySelector("#infobox"));
-engine.mountToolbox(document.querySelector("#toolbox"));
+engine.mountInfobox(<HTMLElement>document.querySelector("#infobox"));
+engine.mountToolbox(<HTMLElement>document.querySelector("#toolbox"));
 
 canvas.width = document.documentElement.clientWidth;
 canvas.height = document.documentElement.clientHeight;
@@ -20,17 +20,19 @@ window.addEventListener("resize", e => {
   canvas.height = document.documentElement.clientHeight;
 });
 
-document.querySelector('#save').addEventListener('click', () => {
+(<HTMLElement>document.querySelector('#save')).addEventListener('click', () => {
   let save = JSON.stringify(engine.toJson());
   prompt("Here's a save string, click load and enter it to load it:", save);
 });
 
-document.querySelector('#load').addEventListener('click', () => {
+(<HTMLElement>document.querySelector('#load')).addEventListener('click', () => {
   let save = prompt("Enter a save string:", "");
+  if(save) {
   try {
     engine.fromJson(JSON.parse(save));
   } catch(e) {
     alert("Could not load save, maybe it's invalid?\n\n" + e);
+  }
   }
 });
 

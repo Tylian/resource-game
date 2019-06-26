@@ -1,8 +1,4 @@
 {
-  "category": "basic",
-  "radius": 30,
-  "resources": {},
-  "ingredients": {},
   "buildtime": 30,
   "manual": true,
   "recipes": [
