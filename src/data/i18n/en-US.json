@@ -1,5 +1,5 @@
 {
-  "machine.axe": "Wood Axe",
+  "machine.axe": "Axe",
   "machine.battery": "Capacitor",
   "machine.boiler": "Steam Boiler",
   "machine.box": "Storage",
@@ -8,7 +8,7 @@
   "machine.furnace-stone": "Stone Furnace",
   "machine.miner": "Miner",
   "machine.pickaxe": "Pickaxe",
-  "machine.pump": "Water Pump",
+  "machine.pump": "Pump",
   "machine.tank": "Tank",
 
   "resource.coal": "Coal",
@@ -20,7 +20,8 @@
   "resource.water": "Water",
   "resource.wood": "Wood",
 
-  "recipe.ghost": "unbuilt",
+  "recipe.ghost": "[todo]",
+  "recipe.none": "[no recipe]",
 
   "recipe.boil-water": "Boiling",
   "recipe.box-coal": "Coal",
