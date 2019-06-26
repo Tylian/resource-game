@@ -32,6 +32,9 @@ interface Point {
   y: number;
 }
 
+
+const Konami: number[] = [13, 65, 66, 39, 37, 39, 37, 40, 40, 38, 38];
+
 export default class Engine {
   public machines = new Map<string, Machine>();
   public camera: Point = { x: 0, y: 0 };
@@ -50,25 +53,44 @@ export default class Engine {
 
   private seenResources = new Set<string>();
   
-  constructor(public canvas: HTMLCanvasElement, public ctx = canvas.getContext("2d", { alpha: false })) {
+  private debug = false;
+  private konami: number[] = [];
+  
     document.addEventListener('keyup', (e) => {
       let key = e.which || e.keyCode;
-      if(key == 46 && this.machineFocus !== null) {
+      
+      if(process.env.NODE_ENV == "development" && this.debug) {
+        console.log(`${e.key}: ${key}`);
+      }
+
+      if((key == 46 || key == 8) && this.machineFocus !== null) {
         this.machineFocus.clearConnections();
         this.machines.delete(this.machineFocus.uuid);
         this.machineFocus = null;
         this.infoNode.update(null);
       }
+
+      this.konami = [key, ...this.konami].slice(0, Konami.length);
+      if(this.konami.every((v, i) => v == Konami[i])) {
+        this.debugMode();
+      }
+
+      if(this.debug && key == 70 && this.machineFocus !== null) {
+        for(let [key, resource] of this.machineFocus.resources) {
+          resource.amount = resource.maximum;
+        }
+      }
+
+      if(this.debug && key == 69 && this.machineFocus !== null) {
+        for(let [key, resource] of this.machineFocus.resources) {
+          resource.amount = 0;
+        }
+      }
+
     }, true);
 
     canvas.addEventListener("mousedown", (e) => {
-      if(e.button == 2) {
-        this.dragMode = DragMode.Camera;
-        this.dragOrigin = {
-          x: e.clientX,
-          y: e.clientY
-        }
-      } else if(e.button == 0) {
+      if(e.button == 0) {
         let machine = this.getMachineAt(e.clientX, e.clientY);
         if(machine !== null) {
           this.dragMode = DragMode.Machine;
@@ -79,13 +101,20 @@ export default class Engine {
             y: machine.y - (this.camera.y + e.clientY)
           };
         }
+      } else if(e.button == 2) {
+        this.dragMode = DragMode.Camera;
+        this.dragOrigin = {
+          x: e.clientX,
+          y: e.clientY
       }
+      } 
     });
     canvas.addEventListener("mousemove", (e) => {
+      this.mouseMachine = this.getMachineAt(e.clientX, e.clientY);
       if(this.dragMode == DragMode.Camera) {
         this.cameraOffset.x = this.dragOrigin.x - e.clientX;
         this.cameraOffset.y = this.dragOrigin.y - e.clientY;
-      } else if(this.dragMode == DragMode.Machine) {
+      } else if(this.dragMode == DragMode.Machine && this.machineTarget !== null) {
         this.machineTarget.move(
           (this.camera.x + e.clientX) + this.dragOffset.x,
           (this.camera.y + e.clientY) + this.dragOffset.y
@@ -142,7 +171,7 @@ export default class Engine {
   }
 
   public machineUnlocked(id: string): boolean {
-    for(let ingredient of Object.keys(getData(DataType.Machine, id).ingredients)) {
+    if(this.debug) return true;
       if(!this.seenResources.has(ingredient)) {
         return false;
       }
@@ -151,7 +180,11 @@ export default class Engine {
   }
 
   public recipeUnlocked(id: string): boolean {
-    for(let ingredient of Object.keys(getData(DataType.Recipe, id).ingredients)) {
+    if(this.debug) return true;
+
+    const data = getData(DataType.Recipe, id)
+    if(data === null) return false;
+    for(let ingredient of Object.keys(data.ingredients)) {
       if(!this.seenResources.has(ingredient)) {
         return false;
       }
@@ -246,6 +279,12 @@ export default class Engine {
     for(let [key, resource] of this.machineFocus.resources) {
       resource.amount = resource.maximum;
     }
+
+  public debugMode() {
+    console.log('Debug mode enabled');
+    this.debug = true;
+    this.toolboxNode.update();
+    this.infoNode.update(this.machineFocus);
   }
 
   public fromJson(data: SaveData) {
