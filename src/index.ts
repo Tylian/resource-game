@@ -70,22 +70,9 @@ if(process.env.NODE_ENV != 'development') {
   };
   render();
 
-  if(module.hot) {
-    module.hot.accept('./Engine', function() {
-      console.log('Engine updated, reloading');
-      let save = engine.toJson();
-  
-      engine = new Engine(canvas);
-      engine.mountInfobox(document.querySelector("#infobox") as HTMLElement);
-      engine.mountToolbox(document.querySelector("#toolbox") as HTMLElement);
-  
-      engine.fromJson(save);
-    });
-  }
-
   setInterval(() => {
     window.localStorage.setItem('savestring', JSON.stringify(engine.toJson()));
-  })
+  }, 30000);
 
   if(window.localStorage.getItem('savestring') !== null) {
     try {

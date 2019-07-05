@@ -5,7 +5,7 @@ import Node, { InstanceData } from "./Node";
 
 import InfoboxComponent from "./dom/Infobox";
 import ToolboxComponent from "./dom/Toolbox";
-import { Matrix, mmult } from './utils';
+import { Matrix, mmult, circleInAABB, Point } from './utils';
 
 const enum DragMode {
   None,
@@ -29,12 +29,7 @@ interface SaveData {
   }
 }
 
-interface Point {
-  x: number;
-  y: number;
-}
-
-interface Camera {
+export interface Camera {
   x: number;
   y: number;
   zoom: number;
@@ -45,11 +40,11 @@ const Konami: number[] = [13, 65, 66, 39, 37, 39, 37, 40, 40, 38, 38];
 export default class Engine {
   public nodes = new Map<string, Node>();
   public camera: Camera = { x: 0, y: 0, zoom: 1 };
-  public cameraOffset: Point = { x: 0, y: 0 }
+  public cameraOffset: Point = new Point(0, 0)
 
   private dragMode: DragMode = DragMode.None;
-  private dragOrigin: Point = { x: 0, y: 0 };
-  private dragOffset: Point = { x: 0, y: 0 };
+  private dragOrigin: Point = new Point(0, 0);
+  private dragOffset: Point = new Point(0, 0);
 
   private targetNode: Node | null = null;
   private tempNode: Node | null = null;
@@ -66,6 +61,8 @@ export default class Engine {
 
   private screenMatrix: Matrix;
   private worldMatrix: Matrix;
+
+  private screenAABB: [Point, Point];
 
   get cameraX() { return this.camera.x + this.cameraOffset.x; }
   get cameraY() { return this.camera.y + this.cameraOffset.y; }
@@ -131,12 +128,12 @@ export default class Engine {
         if(node !== null) {
           this.dragMode = DragMode.Node;
           this.targetNode = node;
-          this.dragOrigin = { x: e.clientX, y: e.clientY };
-          this.dragOffset = { x: node.x - mouse[0], y: node.y - mouse[1] };
+          this.dragOrigin = new Point(e.clientX, e.clientY);
+          this.dragOffset = new Point(node.x - mouse[0], node.y - mouse[1]);
         }
       } else if(e.button == 2) {
         this.dragMode = DragMode.Camera;
-        this.dragOrigin = { x: e.clientX, y: e.clientY }
+        this.dragOrigin = new Point(e.clientX, e.clientY)
       } 
     });
 
@@ -174,11 +171,11 @@ export default class Engine {
         this.camera.x += this.cameraOffset.x;
         this.camera.y += this.cameraOffset.y;
         this.dragMode = DragMode.None;
-        this.cameraOffset = { x: 0, y: 0 };
+        this.cameraOffset = new Point(0, 0);
         this.updateMatrix();
       } else if(this.dragMode == DragMode.Node && e.button == 0) {
         this.dragMode = DragMode.None;
-        this.dragOffset = { x: 0, y: 0 };
+        this.dragOffset = new Point(0, 0);
         this.targetNode = null;
       }
     });
@@ -233,7 +230,7 @@ export default class Engine {
     }
     return true;
   }
-  
+
   public tick() {
     for(let node of this.nodes.values()) {
       node.tick();
@@ -254,6 +251,7 @@ export default class Engine {
   }
 
   public render() {
+    this.ctx.save();
     this.ctx.resetTransform();
     this.ctx.fillStyle = 'white';
     this.ctx.fillRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
@@ -267,6 +265,7 @@ export default class Engine {
     const distance = 100;
 
     this.ctx.strokeStyle = "#ddd";
+    this.ctx.lineWidth = 1;
     this.ctx.beginPath();
     for(let x = Math.floor(topLeft[0] / distance) * distance; x < bottomRight[0]; x += distance) {
       for(let y = Math.floor(topLeft[1] / distance) * distance; y < bottomRight[1]; y += distance) {
@@ -280,30 +279,41 @@ export default class Engine {
     this.ctx.stroke();
     
     this.ctx.lineWidth = 1;
+    this.ctx.beginPath();
+    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
     for(let [uuid, node] of this.nodes) {
       for(let output of node.outputs) {
         if(!(node.equals(this.focusNode) || node.equals(this.mouseNode))) {
-          node.drawOutputLine(this.ctx, output, 'rgba(0, 0, 0, 0.5)');
+          node.drawOutputLine(this.ctx, output, this.screenAABB);
         }
       }
     }
+    this.ctx.stroke();
     
     for(let [uuid, node] of this.nodes) {
-      node.render(this.ctx, node.equals(this.focusNode));
+      if(this.isNodeVisible(node)) {
+        node.render(this.ctx, node.equals(this.focusNode));
+      }
     }
 
     this.ctx.lineWidth = 2;
-
     if(this.mouseNode !== null && !this.mouseNode.equals(this.focusNode)) {
+      this.ctx.strokeStyle = this.mouseNode.isGhost() ? 'rgba(0,0,0,0.5)' : 'black';
+      this.ctx.beginPath();
       for(let output of this.mouseNode.outputs) {
-        this.mouseNode.drawOutputLine(this.ctx, output, 'black');
+        this.mouseNode.drawOutputLine(this.ctx, output, this.screenAABB);
       }
+      this.ctx.stroke();
     }
+    
 
     if(this.focusNode !== null) {
+      this.ctx.strokeStyle = this.focusNode.isGhost() ? 'rgba(0,0,80,0.5)' : 'green';
+      this.ctx.beginPath();
       for(let output of this.focusNode.outputs) {
-        this.focusNode.drawOutputLine(this.ctx, output, 'green');
+        this.focusNode.drawOutputLine(this.ctx, output, this.screenAABB);
       }
+      this.ctx.stroke();
     }
 
     // XXX Can't combine with above loop because it renders under stuff
@@ -312,6 +322,7 @@ export default class Engine {
       this.tempNode.render(this.ctx, false);
       this.ctx.globalAlpha = 1;
     }
+    this.ctx.restore();
   }
   
 
@@ -379,6 +390,10 @@ export default class Engine {
     return this.nodes.get(uuid);
   }
 
+  public isNodeVisible(node: Node) {
+    return circleInAABB(this.screenAABB, new Point(node.x, node.y), node.radius);
+  }
+
   public debugMode() {
     console.log('Debug mode enabled');
     this.debug = true;
@@ -431,6 +446,14 @@ export default class Engine {
 
     this.screenMatrix = mmult(mmult(A, B), C);
     this.worldMatrix = mmult(mmult(D, E), F);
+
+    let topLeft = this.screenToWorld(0, 0);
+    let bottomRight = this.screenToWorld(this.canvas.width, this.canvas.height);
+
+    this.screenAABB = [
+      new Point(topLeft[0], topLeft[1]),
+      new Point(bottomRight[0], bottomRight[1]),
+    ]
   }
 
   public fromJson(data: SaveData) {

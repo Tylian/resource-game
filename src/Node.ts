@@ -3,6 +3,7 @@ import uuidv4 from 'uuid/v4';
 import { getMetadata, DataType, hasMetadata, RecipeMeta, ResourceMap, ChanceRecipe, NodeMeta } from './data';
 
 import translate from './i18n';
+import { Point, AABB, lineInAABB } from './utils';
 const i18n = translate('en-US');
 
 const PI2 = Math.PI * 2;
@@ -191,31 +192,27 @@ export default class Node {
     ctx.restore();
   }
 
-  public drawOutputLine(ctx: CanvasRenderingContext2D, output: Node, color: string) {
-    ctx.save();
-    ctx.fillStyle = "transparent";
-    ctx.strokeStyle = color;
-    if(output.isGhost()) {
-      ctx.globalAlpha = 0.5;
+  public drawOutputLine(ctx: CanvasRenderingContext2D, output: Node, screenAABB: AABB) {
+    const angle = Math.atan2(output.y - this.y, output.x - this.x);
+    const head = 10;
+
+    const from: Point = {
+      x: this.x + Math.cos(angle) * this.radius,
+      y: this.y + Math.sin(angle) * this.radius
+    };
+    const to: Point = {
+      x: output.x - Math.cos(angle) * output.radius,
+      y: output.y - Math.sin(angle) * output.radius
+    };
+
+    if(lineInAABB(from, to, screenAABB)) {
+      ctx.moveTo(from.x, from.y);
+      ctx.lineTo(to.x, to.y);
+      
+      ctx.lineTo(to.x - head * Math.cos(angle - Math.PI/6), to.y - head * Math.sin(angle - Math.PI/6));
+      ctx.moveTo(to.x, to.y);
+      ctx.lineTo(to.x - head * Math.cos(angle + Math.PI/6), to.y - head * Math.sin(angle + Math.PI/6));
     }
-    
-    let angle = Math.atan2(output.y - this.y, output.x - this.x);
-    let head = 10;
-
-    let fromX = this.x + Math.cos(angle) * this.radius;
-    let fromY = this.y + Math.sin(angle) * this.radius;
-    let toX = output.x - Math.cos(angle) * output.radius;
-    let toY = output.y - Math.sin(angle) * output.radius;
-
-    ctx.beginPath();
-    ctx.moveTo(fromX, fromY);
-    ctx.lineTo(toX, toY);
-    
-    ctx.lineTo(toX - head * Math.cos(angle - Math.PI/6), toY - head * Math.sin(angle - Math.PI/6));
-    ctx.moveTo(toX, toY);
-    ctx.lineTo(toX - head * Math.cos(angle + Math.PI/6), toY - head * Math.sin(angle + Math.PI/6));
-    ctx.stroke();
-    ctx.restore();
   }
 
   public tick() {

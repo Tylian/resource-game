@@ -39,7 +39,7 @@ export default class ToolboxComponent implements RedomComponent {
     });
     
     this.update();
-    this.el = el('div#toolbox', accordians);
+    this.el = el('div#toolbox.floating', accordians);
   }
 
   update() {

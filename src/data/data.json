@@ -294,21 +294,6 @@
         "coal": 1
       }
     },
-    "furnace.basic.copper": {
-      "speed": 40,
-      "ingredients": {
-        "coal": 2,
-        "copper-ore": 1
-      },
-      "resources": {
-        "coal": 20,
-        "copper-ore": 10,
-        "copper-ingot": 10
-      },
-      "results": {
-        "copper-ingot": 1
-      }
-    },
     "furnace.energy.copper": {
       "speed": 20,
       "ingredients": {
@@ -324,9 +309,19 @@
         "copper-ingot": 1
       }
     },
-    "box.copper-ingot": {
+    "furnace.basic.copper": {
+      "speed": 40,
+      "ingredients": {
+        "coal": 2,
+        "copper-ore": 1
+      },
       "resources": {
-        "copper-ingot": 400
+        "coal": 20,
+        "copper-ore": 10,
+        "copper-ingot": 10
+      },
+      "results": {
+        "copper-ingot": 1
       }
     },
     "energy.steam": {
@@ -357,6 +352,11 @@
         "copper-ore": 1
       }
     },
+    "box.copper-ingot": {
+      "resources": {
+        "copper-ingot": 400
+      }
+    },
     "miner.copper": {
       "speed": 20,
       "ingredients": {
@@ -368,21 +368,6 @@
       },
       "results": {
         "copper-ore": 1
-      }
-    },
-    "furnace.basic.iron": {
-      "speed": 40,
-      "ingredients": {
-        "coal": 2,
-        "iron-ore": 1
-      },
-      "resources": {
-        "coal": 20,
-        "iron-ore": 10,
-        "iron-ingot": 10
-      },
-      "results": {
-        "iron-ingot": 1
       }
     },
     "furnace.energy.iron": {
@@ -400,9 +385,19 @@
         "iron-ingot": 1
       }
     },
-    "box.copper-ore": {
+    "furnace.basic.iron": {
+      "speed": 40,
+      "ingredients": {
+        "coal": 2,
+        "iron-ore": 1
+      },
       "resources": {
-        "copper-ore": 400
+        "coal": 20,
+        "iron-ore": 10,
+        "iron-ingot": 10
+      },
+      "results": {
+        "iron-ingot": 1
       }
     },
     "tank.water": {
@@ -420,6 +415,11 @@
         "iron-ore": 1
       }
     },
+    "box.copper-ore": {
+      "resources": {
+        "copper-ore": 400
+      }
+    },
     "miner.iron": {
       "speed": 20,
       "ingredients": {
@@ -433,11 +433,6 @@
         "iron-ore": 1
       }
     },
-    "box.iron-ingot": {
-      "resources": {
-        "iron-ingot": 400
-      }
-    },
     "manual.stone": {
       "speed": 40,
       "ingredients": {},
@@ -446,6 +441,11 @@
       },
       "results": {
         "stone": 1
+      }
+    },
+    "box.iron-ingot": {
+      "resources": {
+        "iron-ingot": 400
       }
     },
     "miner.stone": {
@@ -461,11 +461,6 @@
         "stone": 1
       }
     },
-    "box.iron-ore": {
-      "resources": {
-        "iron-ore": 400
-      }
-    },
     "manual.wood": {
       "speed": 20,
       "ingredients": {},
@@ -474,6 +469,11 @@
       },
       "results": {
         "wood": 1
+      }
+    },
+    "box.iron-ore": {
+      "resources": {
+        "iron-ore": 400
       }
     },
     "miner.wood": {

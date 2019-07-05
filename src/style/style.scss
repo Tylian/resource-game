@@ -22,6 +22,13 @@ canvas.cursor-move {
   cursor: move;
 }
 
+.floating {
+  position: absolute;
+  background-color: rgba(0, 0, 0, 0.5);
+  text-shadow: 0px 1px 0px black;
+  color: white;
+}
+
 button {
   width: 120px;
   height: 25px;
@@ -50,13 +57,9 @@ button {
 }
 
 #controls {
-  position: absolute;
   bottom: 0;
   left: 50%;
   transform: translate(-50%);
-  background-color: rgba(0, 0, 0, 0.5);
-  text-shadow: 0px 1px 0px black;
-  color: white;
   padding: 2px 6px;
   display: flex;
 
@@ -66,10 +69,8 @@ button {
 }
 
 #data {
-  position: absolute;
   bottom: 0;
   left: 0;
   padding: 10px;
-  background-color: rgba(0, 0, 0, 0.5);
-  text-shadow: 0px 1px 0px black;
+  text-align: center;
 }

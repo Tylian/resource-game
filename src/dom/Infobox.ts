@@ -83,7 +83,7 @@ export default class InfoboxComponent implements RedomComponent {
   private recipeButtons = new Map<string, HTMLElement>();
   private resourceList = list('ul', ResourceItem, 'name');
 
-  public el = el('div#infobox.hidden',
+  public el = el('div#infobox.hidden.floating',
     el('h1', this.title = text('')),
     this.activate = place(ActivateButton),
     el('h2', 'Resources'),

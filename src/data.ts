@@ -111,7 +111,8 @@ export function hasMetadata(type: DataType, id: string): boolean {
     throw new ReferenceError(`Unknown data type ${type}`);
   }
 
-  return (data as DataMap)[type][id] !== null;
+  let metadata = (data as DataMap)[type][id];
+  return metadata !== null && typeof metadata === "object";
 }
 
 export function getMetadata(type: DataType.I18n, id: string): I18nMeta | null;

@@ -10,8 +10,16 @@ context(class {
       homeDir: 'src',
       target: 'browser@es6',
       output: 'dist/$name.js',
+      hash: this.isProduction,
+      sourceMaps: {
+        project: !this.isProduction,
+        vendor: !this.isProduction
+      },
       plugins: [
-        WebIndexPlugin({ template: 'index.html' }),
+        WebIndexPlugin({
+          template: 'index.html',
+          path: '.'
+        }),
         JSONPlugin(),
         [
           SassPlugin(),
@@ -19,8 +27,8 @@ context(class {
           CSSPlugin(),
         ],
         this.isProduction && QuantumPlugin({
-          bakeApiIntoBundle: "app",
-          css : true,
+          bakeApiIntoBundle: 'vendor',
+          css: true,
           treeshake: true,
           uglify: true
         }),
