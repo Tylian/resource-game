@@ -8,9 +8,9 @@
   "resources": {},
   "buildtime": 100,
   "recipes": [
-    "miner/stone",
-    "miner/coal",
-    "miner/iron",
-    "miner/copper"
+    "miner.stone",
+    "miner.coal",
+    "miner.iron",
+    "miner.copper"
   ]
 }

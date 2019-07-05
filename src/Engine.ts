@@ -1,6 +1,6 @@
 import * as redom from 'redom';
 
-import { listData, DataType, getData, NodeMeta } from "./data";
+import { listMetadata, DataType, getMetadata, NodeMeta } from "./data";
 import Node, { InstanceData } from "./Node";
 
 import InfoboxComponent from "./dom/Infobox";
@@ -197,7 +197,7 @@ export default class Engine {
   }
 
   public mountToolbox(container: HTMLElement) {
-    this.toolboxElem = new ToolboxComponent(this, listData(DataType.Node).map(key => <NodeMeta>getData(DataType.Node, key)));
+    this.toolboxElem = new ToolboxComponent(this, listMetadata(DataType.Node).map(key => getMetadata(DataType.Node, key)));
     redom.mount(document.body, this.toolboxElem, container, true);
   }
 
@@ -211,7 +211,7 @@ export default class Engine {
   public nodeUnlocked(id: string): boolean {
     if(this.debug) return true;
 
-    const data = getData(DataType.Node, id);
+    const data = getMetadata(DataType.Node, id);
     if(data === null) return false;
     for(let ingredient of Object.keys(data.ingredients)) {
       if(!this.seenResources.has(ingredient)) {
@@ -224,7 +224,7 @@ export default class Engine {
   public recipeUnlocked(id: string): boolean {
     if(this.debug) return true;
 
-    const data = getData(DataType.Recipe, id)
+    const data = getMetadata(DataType.Recipe, id)
     if(data === null) return false;
     for(let ingredient of Object.keys(data.ingredients)) {
       if(!this.seenResources.has(ingredient)) {

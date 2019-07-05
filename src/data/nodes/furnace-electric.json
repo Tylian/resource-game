@@ -8,7 +8,7 @@
   },
   "buildtime": 80,
   "recipes": [
-    "furnace/energy/iron",
-    "furnace/energy/copper"
+    "furnace.energy.iron",
+    "furnace.energy.copper"
   ]
 }

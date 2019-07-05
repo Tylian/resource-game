@@ -6,5 +6,6 @@ node_modules/
 # build artifacts
 dist
 .cache
+.fusebox
 
 save.json

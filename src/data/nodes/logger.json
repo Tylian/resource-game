@@ -8,6 +8,6 @@
   "resources": {},
   "buildtime": 100,
   "recipes": [
-    "miner/wood"
+    "miner.wood"
   ]
 }

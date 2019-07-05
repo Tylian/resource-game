@@ -1,6 +1,6 @@
 import uuidv4 from 'uuid/v4';
 
-import { getData, DataType, hasData, RecipeMeta, ResourceMap, ChanceRecipe, NodeMeta } from './data';
+import { getMetadata, DataType, hasMetadata, RecipeMeta, ResourceMap, ChanceRecipe, NodeMeta } from './data';
 
 import translate from './i18n';
 const i18n = translate('en-US');
@@ -66,7 +66,7 @@ export default class Node {
 
   //#region convenience getters
   public get data() {
-    return getData(DataType.Node, this.type) as NodeMeta;
+    return getMetadata(DataType.Node, this.type) as NodeMeta;
   }
 
   public get manual() {
@@ -95,14 +95,13 @@ export default class Node {
         results: {}
       };
     } else {
-      return hasData(DataType.Recipe, this.recipeName) 
-        ? getData(DataType.Recipe, this.recipeName) : null;
+      return getMetadata(DataType.Recipe, this.recipeName);
     }
   }
   //#endregion
 
   constructor(public type: string, public uuid = uuidv4()) {
-    if(!hasData(DataType.Node, type)) {
+    if(!hasMetadata(DataType.Node, type)) {
       throw new ReferenceError(`${type} is not a valid node type`);
     }
 
@@ -159,7 +158,7 @@ export default class Node {
 
     ctx.lineWidth = slice;
     for(let [name, resource] of this.resources) {
-      let resData = getData(DataType.Resource, name);
+      let resData = getMetadata(DataType.Resource, name);
       ctx.strokeStyle = resData !== null ? resData.color : 'black';
       ctx.beginPath();
       ctx.arc(this.x, this.y, r - ctx.lineWidth / 2, nHalfPI, nHalfPI + PI2 * (resource.amount / resource.maximum));
@@ -232,10 +231,10 @@ export default class Node {
      // resources
      for(let [name, amount] of this.getPullResources()) {
       let remaining = amount;
-      let resource = <Resource>this.getResource(name);
+      let resource = this.getResource(name) as Resource;
       let inputs = [...this.inputs]
         .filter(node => node.getResource(name) !== null)
-        .sort((a, b) => (<Resource>a.getResource(name)).amount - (<Resource>a.getResource(name)).amount);
+        .sort((a, b) => b.getResourceAmount(name) - a.getResourceAmount(name));
 
       for(let [i, input] of inputs.entries()) {
         let pulled = input.pullResource(name, Math.ceil(remaining / (inputs.length - i)));
@@ -444,7 +443,7 @@ export default class Node {
   }
 
   private updateResources() {
-    let info = <NodeMeta>getData(DataType.Node, this.type);
+    let info = getMetadata(DataType.Node, this.type);
     let resources = {
       ...(this.isGhost() ? info.ingredients : info.resources),
       ...(this.recipe !== null ? this.recipe.resources : {})

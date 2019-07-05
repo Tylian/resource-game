@@ -6,7 +6,7 @@
   },
   "buildtime": 10,
   "recipes": [
-    "tank/water",
-    "tank/steam"
+    "tank.water",
+    "tank.steam"
   ]
 }

@@ -6,12 +6,12 @@
   },
   "buildtime": 10,
   "recipes": [
-    "box/coal",
-    "box/iron-ingot",
-    "box/iron-ore",
-    "box/copper-ingot",
-    "box/copper-ore",
-    "box/stone",
-    "box/wood"
+    "box.coal",
+    "box.iron-ingot",
+    "box.iron-ore",
+    "box.copper-ingot",
+    "box.copper-ore",
+    "box.stone",
+    "box.wood"
   ]
 }

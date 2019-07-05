@@ -7,6 +7,6 @@
   },
   "buildtime": 80,
   "recipes": [
-    "energy/steam"
+    "energy.steam"
   ]
 }

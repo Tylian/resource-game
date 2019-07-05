@@ -1,14 +1,12 @@
+import * as data from './data/data.json';
+
 export interface ResourceMap<T = number> {
   [resource: string]: T
 }
 
-export interface Key {
+export interface I18nMeta {
   key: string;
-}
-
-export interface ResourceMeta {
-  key: string,
-  color: string;
+  [key: string]: string;
 }
 
 export interface NodeMeta {
@@ -40,25 +38,43 @@ export interface ChanceRecipe extends BaseRecipe {
 
 export type RecipeMeta = StandardRecipe | ChanceRecipe;
 
-export interface UnknownMeta {
-  key: string,
-  [key: string]: any
+export interface ResourceMeta {
+  key: string;
+  color: string;
 }
+
+type MetaType = I18nMeta | NodeMeta | RecipeMeta | ResourceMeta;
+
+type I18nData = Partial<I18nMeta>;
+type NodeData = Partial<NodeMeta>;
+type RecipeData = Partial<RecipeMeta>;
+type ResourceData = Partial<ResourceMeta>;
 
 export const enum DataType {
-  Node,
-  Recipe,
-  Resource
+  I18n = "i18n",
+  Node = "nodes",
+  Recipe = "recipes",
+  Resource = "resources"
 }
 
-const requireMap = {
-  [DataType.Node]: require.context('./data/nodes/', true, /\.json$/),
-  [DataType.Recipe]: require.context('./data/recipes/', true, /\.json$/),
-  [DataType.Resource]: require.context('./data/resources/', true, /\.json$/),
-};
+type MetaMap<T> = { [key: string]: T };
+type DataMap = {
+  [DataType.I18n]: MetaMap<I18nData>,
+  [DataType.Node]: MetaMap<NodeData>,
+  [DataType.Recipe]: MetaMap<RecipeData>,
+  [DataType.Resource]: MetaMap<ResourceData>
+}
 
-type DefaultMap = {[DataType.Node]: NodeMeta, [DataType.Recipe]: RecipeMeta, [DataType.Resource]: ResourceMeta}
+export interface UnknownMeta {
+  key: string;
+  [key: string]: any;
+}
+
+type DefaultMap = {[DataType.I18n]: I18nMeta, [DataType.Node]: NodeMeta, [DataType.Recipe]: RecipeMeta, [DataType.Resource]: ResourceMeta}
 const defaultMap: DefaultMap = {
+  [DataType.I18n]: {
+    "key": "default",
+  },
   [DataType.Node]: {
     "key": "default",
     "category": "basic",
@@ -76,36 +92,40 @@ const defaultMap: DefaultMap = {
     "resources": {},
     "results": {}
   },
-  [DataType.Resource]: { "key": "default", "color": "black" }
+  [DataType.Resource]: {
+    "key": "default",
+    "color": "black"
+  }
 };
 
-export function listData(type: DataType): string[] {
-  if(requireMap[type] === undefined) {
+export function listMetadata(type: DataType): string[] {
+  if(data[type] === undefined) {
     throw new ReferenceError(`Unknown data type ${type}`);
   }
 
-  return requireMap[type].keys().map(key => key.slice(2, key.length - 5));
+  return Object.keys(data[type]);
 }
 
-export function hasData(type: DataType, id: string | null | undefined): boolean {
-  if(requireMap[type] === undefined) {
+export function hasMetadata(type: DataType, id: string): boolean {
+  if(data[type] === undefined) {
     throw new ReferenceError(`Unknown data type ${type}`);
   }
 
-  return requireMap[type].keys().includes(`./${id}.json`);
+  return (data as DataMap)[type][id] !== null;
 }
 
-export function getData(type: DataType.Node, id: string | null | undefined): NodeMeta | null;
-export function getData(type: DataType.Recipe, id: string | null | undefined): RecipeMeta | null;
-export function getData(type: DataType.Resource, id: string | null | undefined): ResourceMeta | null;
-export function getData(type: DataType, id: string | null | undefined): UnknownMeta | null {
-  if(!hasData(type, id)) {
+export function getMetadata(type: DataType.I18n, id: string): I18nMeta | null;
+export function getMetadata(type: DataType.Node, id: string): NodeMeta | null;
+export function getMetadata(type: DataType.Recipe, id: string): RecipeMeta | null;
+export function getMetadata(type: DataType.Resource, id: string): ResourceMeta | null;
+export function getMetadata(type: DataType, id: string): UnknownMeta | null {
+  if(!hasMetadata(type, id)) {
     return null;
   }
 
   return {
     ...defaultMap[type],
-    ...requireMap[type](`./${id}.json`),
+    ...(data as DataMap)[type][id],
     key: id
   };
 }

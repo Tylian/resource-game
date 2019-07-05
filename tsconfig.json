@@ -1,14 +1,19 @@
 {
   "compilerOptions": {
-    "outDir": "./dist/",
-    "sourceMap": true,
-    "noImplicitAny": true,
-    "target": "es6",
-    "jsx": "react",
     "allowJs": true,
     "allowSyntheticDefaultImports": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "importHelpers": true,
+    "inlineSources": true,
+    "jsx": "react",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "noImplicitAny": true,
+    "outDir": "./dist/",
     "resolveJsonModule": true,
-    "moduleResolution": "node"
+    "sourceMap": true,
+    "target": "es6"
   },
   "include": ["src/**/*", "types"]
 }

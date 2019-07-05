@@ -8,6 +8,6 @@
   },
   "buildtime": 60,
   "recipes": [
-    "energy/coal"
+    "energy.coal"
   ]
 }

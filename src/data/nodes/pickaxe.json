@@ -2,9 +2,9 @@
   "buildtime": 30,
   "manual": true,
   "recipes": [
-    "manual/stone",
-    "manual/coal",
-    "manual/iron",
-    "manual/copper"
+    "manual.stone",
+    "manual.coal",
+    "manual.iron",
+    "manual.copper"
   ]
 }

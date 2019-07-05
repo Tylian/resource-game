@@ -1,0 +1,535 @@
+{
+  "i18n": {
+    "en-US": {
+      "node.axe": "Axe",
+      "node.battery": "Capacitor",
+      "node.boiler": "Steam Boiler",
+      "node.box": "Storage",
+      "node.burner": "Burner",
+      "node.engine": "Steam Engine",
+      "node.furnace-electric": "Arc Furnace",
+      "node.furnace-stone": "Stone Furnace",
+      "node.miner": "Miner",
+      "node.pickaxe": "Pickaxe",
+      "node.pump": "Pump",
+      "node.tank": "Tank",
+      "node.logger": "Logger",
+      "resource.coal": "Coal",
+      "resource.energy": "Energy",
+      "resource.iron-ingot": "Iron Ingot",
+      "resource.iron-ore": "Iron Ore",
+      "resource.copper-ingot": "Copper Ingot",
+      "resource.copper-ore": "Copper Ore",
+      "resource.steam": "Steam",
+      "resource.stone": "Stone",
+      "resource.water": "Water",
+      "resource.wood": "Wood",
+      "recipe.ghost": "[todo]",
+      "recipe.none": "[no recipe]",
+      "recipe.boil-water": "Boiling",
+      "recipe.box.coal": "Coal",
+      "recipe.box.iron-ingot": "Iron Ingot",
+      "recipe.box.iron-ore": "Iron Ore",
+      "recipe.box.copper-ingot": "Copper Ingot",
+      "recipe.box.copper-ore": "Copper Ore",
+      "recipe.box.stone": "Stone",
+      "recipe.box.wood": "Wood",
+      "recipe.energy.coal": "Coal",
+      "recipe.energy.steam": "Steam",
+      "recipe.furnace.basic.iron": "Iron Ingot",
+      "recipe.furnace.energy.iron": "Iron Ingot",
+      "recipe.furnace.basic.copper": "Copper Ingot",
+      "recipe.furnace.energy.copper": "Copper Ingot",
+      "recipe.manual.coal": "Coal",
+      "recipe.manual.iron": "Iron Ore",
+      "recipe.manual.copper": "Copper Ore",
+      "recipe.manual.stone": "Stone",
+      "recipe.manual.wood": "Chop Tree",
+      "recipe.miner.coal": "Coal",
+      "recipe.miner.iron": "Iron Ore",
+      "recipe.miner.copper": "Copper Ore",
+      "recipe.miner.stone": "Stone",
+      "recipe.miner.wood": "Chop Wood",
+      "recipe.pump-water": "Water",
+      "recipe.tank.steam": "Steam",
+      "recipe.tank.water": "Water",
+      "category.storage": "Storage",
+      "category.consumers": "Consumers",
+      "category.generators": "Generators",
+      "category.processing": "Processing",
+      "category.resources": "Resources",
+      "category.basic": "Basic"
+    }
+  },
+  "nodes": {
+    "axe": {
+      "buildtime": 30,
+      "manual": true,
+      "recipes": [
+        "manual.wood"
+      ]
+    },
+    "battery": {
+      "radius": 40,
+      "category": "storage",
+      "ingredients": {
+        "iron-ingot": 1,
+        "copper-ingot": 4,
+        "coal": 1
+      },
+      "buildtime": 15,
+      "resources": {
+        "energy": 1000000
+      }
+    },
+    "boiler": {
+      "radius": 40,
+      "category": "generators",
+      "ingredients": {
+        "stone": 2,
+        "coal": 1,
+        "iron-ingot": 5
+      },
+      "buildtime": 80,
+      "recipes": [
+        "boil-water"
+      ]
+    },
+    "box": {
+      "radius": 40,
+      "category": "storage",
+      "ingredients": {
+        "wood": 4
+      },
+      "buildtime": 10,
+      "recipes": [
+        "box.coal",
+        "box.iron-ingot",
+        "box.iron-ore",
+        "box.copper-ingot",
+        "box.copper-ore",
+        "box.stone",
+        "box.wood"
+      ]
+    },
+    "burner": {
+      "radius": 45,
+      "category": "generators",
+      "ingredients": {
+        "stone": 4,
+        "coal": 1,
+        "iron-ingot": 2
+      },
+      "buildtime": 60,
+      "recipes": [
+        "energy.coal"
+      ]
+    },
+    "engine": {
+      "radius": 40,
+      "category": "generators",
+      "ingredients": {
+        "copper-ingot": 3,
+        "iron-ingot": 4
+      },
+      "buildtime": 80,
+      "recipes": [
+        "energy.steam"
+      ]
+    },
+    "furnace-electric": {
+      "radius": 40,
+      "category": "processing",
+      "ingredients": {
+        "stone": 2,
+        "copper-ingot": 2,
+        "iron-ingot": 4
+      },
+      "buildtime": 80,
+      "recipes": [
+        "furnace.energy.iron",
+        "furnace.energy.copper"
+      ]
+    },
+    "furnace-stone": {
+      "radius": 40,
+      "category": "processing",
+      "ingredients": {
+        "coal": 1,
+        "stone": 3
+      },
+      "buildtime": 80,
+      "recipes": [
+        "furnace.basic.iron",
+        "furnace.basic.copper"
+      ]
+    },
+    "logger": {
+      "radius": 45,
+      "category": "resources",
+      "ingredients": {
+        "copper-ingot": 1,
+        "iron-ingot": 3
+      },
+      "resources": {},
+      "buildtime": 100,
+      "recipes": [
+        "miner.wood"
+      ]
+    },
+    "miner": {
+      "radius": 60,
+      "category": "resources",
+      "ingredients": {
+        "copper-ingot": 1,
+        "iron-ingot": 3
+      },
+      "resources": {},
+      "buildtime": 100,
+      "recipes": [
+        "miner.stone",
+        "miner.coal",
+        "miner.iron",
+        "miner.copper"
+      ]
+    },
+    "pickaxe": {
+      "buildtime": 30,
+      "manual": true,
+      "recipes": [
+        "manual.stone",
+        "manual.coal",
+        "manual.iron",
+        "manual.copper"
+      ]
+    },
+    "pump": {
+      "radius": 25,
+      "category": "resources",
+      "ingredients": {
+        "iron-ingot": 2
+      },
+      "buildtime": 30,
+      "recipes": [
+        "pump-water"
+      ]
+    },
+    "tank": {
+      "radius": 40,
+      "category": "storage",
+      "ingredients": {
+        "iron-ingot": 2
+      },
+      "buildtime": 10,
+      "recipes": [
+        "tank.water",
+        "tank.steam"
+      ]
+    }
+  },
+  "recipes": {
+    "boil-water": {
+      "speed": 1,
+      "ingredients": {
+        "water": 60,
+        "coal": 0.015
+      },
+      "resources": {
+        "water": 4000,
+        "coal": 1,
+        "steam": 4000
+      },
+      "results": {
+        "steam": 60
+      }
+    },
+    "pump-water": {
+      "speed": 1,
+      "ingredients": {},
+      "resources": {
+        "water": 6000
+      },
+      "results": {
+        "water": 1200
+      }
+    },
+    "box.coal": {
+      "resources": {
+        "coal": 400
+      }
+    },
+    "energy.coal": {
+      "speed": 1,
+      "ingredients": {
+        "coal": 0.015
+      },
+      "resources": {
+        "coal": 5,
+        "energy": 1250
+      },
+      "results": {
+        "energy": 25
+      }
+    },
+    "manual.coal": {
+      "speed": 40,
+      "ingredients": {},
+      "resources": {
+        "coal": 10
+      },
+      "results": {
+        "coal": 1
+      }
+    },
+    "miner.coal": {
+      "speed": 20,
+      "ingredients": {
+        "energy": 180
+      },
+      "resources": {
+        "coal": 10,
+        "energy": 1800
+      },
+      "results": {
+        "coal": 1
+      }
+    },
+    "furnace.basic.copper": {
+      "speed": 40,
+      "ingredients": {
+        "coal": 2,
+        "copper-ore": 1
+      },
+      "resources": {
+        "coal": 20,
+        "copper-ore": 10,
+        "copper-ingot": 10
+      },
+      "results": {
+        "copper-ingot": 1
+      }
+    },
+    "furnace.energy.copper": {
+      "speed": 20,
+      "ingredients": {
+        "energy": 4000,
+        "copper-ore": 1
+      },
+      "resources": {
+        "energy": 8000,
+        "copper-ore": 10,
+        "copper-ingot": 10
+      },
+      "results": {
+        "copper-ingot": 1
+      }
+    },
+    "box.copper-ingot": {
+      "resources": {
+        "copper-ingot": 400
+      }
+    },
+    "energy.steam": {
+      "speed": 5,
+      "ingredients": {
+        "steam": 300
+      },
+      "resources": {
+        "steam": 3000,
+        "energy": 2500
+      },
+      "results": {
+        "energy": 250
+      }
+    },
+    "tank.steam": {
+      "resources": {
+        "steam": 100000
+      }
+    },
+    "manual.copper": {
+      "speed": 40,
+      "ingredients": {},
+      "resources": {
+        "copper-ore": 10
+      },
+      "results": {
+        "copper-ore": 1
+      }
+    },
+    "miner.copper": {
+      "speed": 20,
+      "ingredients": {
+        "energy": 180
+      },
+      "resources": {
+        "copper-ore": 10,
+        "energy": 1800
+      },
+      "results": {
+        "copper-ore": 1
+      }
+    },
+    "furnace.basic.iron": {
+      "speed": 40,
+      "ingredients": {
+        "coal": 2,
+        "iron-ore": 1
+      },
+      "resources": {
+        "coal": 20,
+        "iron-ore": 10,
+        "iron-ingot": 10
+      },
+      "results": {
+        "iron-ingot": 1
+      }
+    },
+    "furnace.energy.iron": {
+      "speed": 20,
+      "ingredients": {
+        "energy": 4000,
+        "iron-ore": 1
+      },
+      "resources": {
+        "energy": 8000,
+        "iron-ore": 10,
+        "iron-ingot": 10
+      },
+      "results": {
+        "iron-ingot": 1
+      }
+    },
+    "box.copper-ore": {
+      "resources": {
+        "copper-ore": 400
+      }
+    },
+    "tank.water": {
+      "resources": {
+        "water": 100000
+      }
+    },
+    "manual.iron": {
+      "speed": 40,
+      "ingredients": {},
+      "resources": {
+        "iron-ore": 10
+      },
+      "results": {
+        "iron-ore": 1
+      }
+    },
+    "miner.iron": {
+      "speed": 20,
+      "ingredients": {
+        "energy": 180
+      },
+      "resources": {
+        "iron-ore": 10,
+        "energy": 1800
+      },
+      "results": {
+        "iron-ore": 1
+      }
+    },
+    "box.iron-ingot": {
+      "resources": {
+        "iron-ingot": 400
+      }
+    },
+    "manual.stone": {
+      "speed": 40,
+      "ingredients": {},
+      "resources": {
+        "stone": 10
+      },
+      "results": {
+        "stone": 1
+      }
+    },
+    "miner.stone": {
+      "speed": 20,
+      "ingredients": {
+        "energy": 180
+      },
+      "resources": {
+        "stone": 10,
+        "energy": 1800
+      },
+      "results": {
+        "stone": 1
+      }
+    },
+    "box.iron-ore": {
+      "resources": {
+        "iron-ore": 400
+      }
+    },
+    "manual.wood": {
+      "speed": 20,
+      "ingredients": {},
+      "resources": {
+        "wood": 10
+      },
+      "results": {
+        "wood": 1
+      }
+    },
+    "miner.wood": {
+      "speed": 10,
+      "ingredients": {
+        "energy": 180
+      },
+      "resources": {
+        "wood": 20,
+        "energy": 900
+      },
+      "results": {
+        "wood": 1
+      }
+    },
+    "box.stone": {
+      "resources": {
+        "stone": 400
+      }
+    },
+    "box.wood": {
+      "resources": {
+        "wood": 400
+      }
+    }
+  },
+  "resources": {
+    "coal": {
+      "color": "#666"
+    },
+    "copper-ingot": {
+      "color": "#cc874d"
+    },
+    "copper-ore": {
+      "color": "#a5754d"
+    },
+    "energy": {
+      "color": "orange"
+    },
+    "iron-ingot": {
+      "color": "#9aa9ba"
+    },
+    "iron-ore": {
+      "color": "#737f8c"
+    },
+    "steam": {
+      "color": "#dbceea"
+    },
+    "stone": {
+      "color": "#999"
+    },
+    "water": {
+      "color": "#7092bf"
+    },
+    "wood": {
+      "color": "#824f32"
+    }
+  }
+}

@@ -7,7 +7,7 @@
   },
   "buildtime": 80,
   "recipes": [
-    "furnace/basic/iron",
-    "furnace/basic/copper"
+    "furnace.basic.iron",
+    "furnace.basic.copper"
   ]
 }

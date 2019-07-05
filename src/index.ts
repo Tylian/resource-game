@@ -6,18 +6,18 @@ import "./style/style.scss";
 import translate from './i18n';
 const i18n = translate('en-US');
 
-const canvas = <HTMLCanvasElement>document.querySelector("#game");
+const canvas = document.querySelector("#game") as HTMLCanvasElement;
 let engine = new Engine(canvas);
 
-engine.mountInfobox(<HTMLElement>document.querySelector("#infobox"));
-engine.mountToolbox(<HTMLElement>document.querySelector("#toolbox"));
+engine.mountInfobox(document.querySelector("#infobox") as HTMLElement);
+engine.mountToolbox(document.querySelector("#toolbox") as HTMLElement);
 
-(<HTMLElement>document.querySelector('#save')).addEventListener('click', () => {
+(document.querySelector('#save') as HTMLElement).addEventListener('click', () => {
   let save = JSON.stringify(engine.toJson());
   prompt("Here's a save string, click load and enter it to load it:", save);
 });
 
-(<HTMLElement>document.querySelector('#load')).addEventListener('click', () => {
+(document.querySelector('#load') as HTMLElement).addEventListener('click', () => {
   let save = prompt("Enter a save string:", "");
   if(save == "") {
     if(confirm("Loading an empty string will reset the game to the beginnig, are you sure?")) {
@@ -76,8 +76,8 @@ if(process.env.NODE_ENV != 'development') {
       let save = engine.toJson();
   
       engine = new Engine(canvas);
-      engine.mountInfobox(<HTMLElement>document.querySelector("#infobox"));
-      engine.mountToolbox(<HTMLElement>document.querySelector("#toolbox"));
+      engine.mountInfobox(document.querySelector("#infobox") as HTMLElement);
+      engine.mountToolbox(document.querySelector("#toolbox") as HTMLElement);
   
       engine.fromJson(save);
     });
