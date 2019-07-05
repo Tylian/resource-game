@@ -12,14 +12,6 @@ let engine = new Engine(canvas);
 engine.mountInfobox(<HTMLElement>document.querySelector("#infobox"));
 engine.mountToolbox(<HTMLElement>document.querySelector("#toolbox"));
 
-canvas.width = document.documentElement.clientWidth;
-canvas.height = document.documentElement.clientHeight;
-
-window.addEventListener("resize", e => {
-  canvas.width = document.documentElement.clientWidth;
-  canvas.height = document.documentElement.clientHeight;
-});
-
 (<HTMLElement>document.querySelector('#save')).addEventListener('click', () => {
   let save = JSON.stringify(engine.toJson());
   prompt("Here's a save string, click load and enter it to load it:", save);
@@ -27,6 +19,13 @@ window.addEventListener("resize", e => {
 
 (<HTMLElement>document.querySelector('#load')).addEventListener('click', () => {
   let save = prompt("Enter a save string:", "");
+  if(save == "") {
+    if(confirm("Loading an empty string will reset the game to the beginnig, are you sure?")) {
+      save = '{"camera":{"x":0,"y":0,"zoom":1},"nodes":{},"seenResources":[]}';
+    } else {
+      return;
+    }
+  }
   if(save) {
     try {
       engine.fromJson(JSON.parse(save));
@@ -82,6 +81,17 @@ if(process.env.NODE_ENV != 'development') {
   
       engine.fromJson(save);
     });
+  }
+
+  setInterval(() => {
+    window.localStorage.setItem('savestring', JSON.stringify(engine.toJson()));
+  })
+
+  if(window.localStorage.getItem('savestring') !== null) {
+    try {
+      let json = JSON.parse(window.localStorage.getItem('savestring'));
+      engine.fromJson(json);
+    } catch(e) { console.error('Failed to load save from localStorage'); console.error(e); }
   }
 
   // debug exports

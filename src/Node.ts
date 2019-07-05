@@ -42,13 +42,10 @@ function isChanceRecipe(recipe: RecipeMeta): recipe is ChanceRecipe {
 function drawText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, fill = "black", stroke = "white") {
   ctx.save()
  
-  ctx.fillStyle = stroke;
-  ctx.fillText(text, x - 1, y + 1);
-  ctx.fillText(text, x - 1, y - 1);
-  ctx.fillText(text, x + 1, y + 1);
-  ctx.fillText(text, x + 1, y - 1);
-
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = stroke;
   ctx.fillStyle = fill;
+  ctx.strokeText(text, x, y);
   ctx.fillText(text, x, y);
 
   ctx.restore();
@@ -137,18 +134,17 @@ export default class Node {
     }
 
     ctx.lineWidth = 1;
-    ctx.strokeStyle = mainColor;
+    
     ctx.fillStyle = accentColor;
     ctx.beginPath();
     ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
     ctx.fill();
-    ctx.stroke();
     
     let recipePercent = this.progress !== null && this.recipeValid()
       ? this.progress / this.recipe.speed : 0;
 
     if(recipePercent > 0) {
-      ctx.strokeStyle = "rgba(255, 0, 0, 0.5)";
+      ctx.strokeStyle = "#ff8080";
       ctx.lineWidth = this.radius * 0.15;
 
       ctx.beginPath();
@@ -186,6 +182,12 @@ export default class Node {
       ctx.font = "9px sans-serif";
       drawText(ctx, i18n(`recipe.${this.isGhost() ? "ghost" : this.recipeName}`), this.x, this.y + lineHeight / 2, mainColor, accentColor);
     }
+
+    ctx.strokeStyle = mainColor;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+    ctx.stroke();
 
     ctx.restore();
   }

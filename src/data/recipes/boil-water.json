@@ -5,9 +5,9 @@
     "coal": 0.015
   },
   "resources": {
-    "water": 12000,
-    "coal": 20,
-    "steam": 12000
+    "water": 4000,
+    "coal": 1,
+    "steam": 4000
   },
   "results": {
     "steam": 60

@@ -5,6 +5,7 @@ import Node, { InstanceData } from "./Node";
 
 import InfoboxComponent from "./dom/Infobox";
 import ToolboxComponent from "./dom/Toolbox";
+import { Matrix, mmult } from './utils';
 
 const enum DragMode {
   None,
@@ -21,6 +22,7 @@ interface SaveData {
   camera: {
     x: number;
     y: number;
+    zoom: number;
   }
   nodes: {
     [uuid: string]: NodeJson;
@@ -61,9 +63,24 @@ export default class Engine {
 
   private debug = false;
   private konami: number[] = [];
+
+  private screenMatrix: Matrix;
+  private worldMatrix: Matrix;
+
+  get cameraX() { return this.camera.x + this.cameraOffset.x; }
+  get cameraY() { return this.camera.y + this.cameraOffset.y; }
   
   constructor(public canvas: HTMLCanvasElement, public ctx = canvas.getContext("2d", { alpha: false }) as CanvasRenderingContext2D) {
-    document.addEventListener('keyup', (e) => {
+    this.canvas.width = document.documentElement.clientWidth;
+    this.canvas.height = document.documentElement.clientHeight;
+
+    window.addEventListener("resize", e => {
+      this.canvas.width = document.documentElement.clientWidth;
+      this.canvas.height = document.documentElement.clientHeight;
+      this.updateMatrix();
+    });
+
+    document.body.addEventListener('keyup', (e) => {
       let key = e.which || e.keyCode;
       
       if(process.env.NODE_ENV == "development" && this.debug) {
@@ -82,61 +99,72 @@ export default class Engine {
         this.debugMode();
       }
 
-      if(this.debug && key == 70 && this.focusNode !== null) {
-        for(let [key, resource] of this.focusNode.resources) {
+      if(this.debug && key == 70 && this.mouseNode !== null) {
+        for(let [key, resource] of this.mouseNode.resources) {
           resource.amount = resource.maximum;
         }
       }
 
-      if(this.debug && key == 69 && this.focusNode !== null) {
-        for(let [key, resource] of this.focusNode.resources) {
+      if(this.debug && key == 69 && this.mouseNode !== null) {
+        for(let [key, resource] of this.mouseNode.resources) {
           resource.amount = 0;
         }
       }
 
     }, true);
 
+    document.body.addEventListener("wheel", (e) => {
+      if (e.deltaY > 0) {
+        this.camera.zoom /= 1.12;
+      }
+      else if (e.deltaY < 0) {
+        this.camera.zoom *= 1.12;
+      }
+      this.updateMatrix();
+      e.preventDefault();
+    })
+
     canvas.addEventListener("mousedown", (e) => {
+      let mouse = this.screenToWorld(e.clientX, e.clientY);
       if(e.button == 0) {
-        let node = this.getNodeAt(e.clientX, e.clientY);
+        let node = this.getNodeAt(...mouse);
         if(node !== null) {
           this.dragMode = DragMode.Node;
           this.targetNode = node;
           this.dragOrigin = { x: e.clientX, y: e.clientY };
-          this.dragOffset = {
-            x: node.x - (this.camera.x + e.clientX),
-            y: node.y - (this.camera.y + e.clientY)
-          };
+          this.dragOffset = { x: node.x - mouse[0], y: node.y - mouse[1] };
         }
       } else if(e.button == 2) {
         this.dragMode = DragMode.Camera;
-        this.dragOrigin = {
-          x: e.clientX,
-          y: e.clientY
-        }
+        this.dragOrigin = { x: e.clientX, y: e.clientY }
       } 
     });
+
     canvas.addEventListener("mousemove", (e) => {
-      this.mouseNode = this.getNodeAt(e.clientX, e.clientY);
+      let mouse = this.screenToWorld(e.clientX, e.clientY);
+      this.mouseNode = this.getNodeAt(...mouse);
+
       if(this.dragMode == DragMode.Camera) {
-        this.cameraOffset.x = this.dragOrigin.x - e.clientX;
-        this.cameraOffset.y = this.dragOrigin.y - e.clientY;
+        this.cameraOffset.x = (this.dragOrigin.x - e.clientX) / this.camera.zoom;
+        this.cameraOffset.y = (this.dragOrigin.y - e.clientY) / this.camera.zoom;
+        this.updateMatrix();
       } else if(this.dragMode == DragMode.Node && this.targetNode !== null) {
         this.targetNode.move(
-          (this.camera.x + e.clientX) + this.dragOffset.x,
-          (this.camera.y + e.clientY) + this.dragOffset.y
+          mouse[0] + this.dragOffset.x,
+          mouse[1] + this.dragOffset.y
         );
       }
 
       // Update cursor
-      let node = this.getNodeAt(e.clientX, e.clientY);
+      let node = this.getNodeAt(...mouse);
       canvas.classList.toggle("cursor-move", node !== null && !node.manual);
       canvas.classList.toggle("cursor-pointer", node !== null && node.manual);
 
       if(this.tempNode) {
-        this.tempNode.move(this.camera.x + e.clientX, this.camera.y + e.clientY);
+        this.tempNode.move(...mouse);
       }
     });
+
     canvas.addEventListener("mouseup", (e) => {
       if(this.dragMode == DragMode.None || this.dragMode > DragMode.None && (e.clientX == this.dragOrigin.x && e.clientY == this.dragOrigin.y)) {
         this.click(e);
@@ -147,6 +175,7 @@ export default class Engine {
         this.camera.y += this.cameraOffset.y;
         this.dragMode = DragMode.None;
         this.cameraOffset = { x: 0, y: 0 };
+        this.updateMatrix();
       } else if(this.dragMode == DragMode.Node && e.button == 0) {
         this.dragMode = DragMode.None;
         this.dragOffset = { x: 0, y: 0 };
@@ -160,6 +189,7 @@ export default class Engine {
     });
 
     this.infoboxElem = new InfoboxComponent(this);
+    this.updateMatrix();
   }
 
   public mountInfobox(container: HTMLElement) {
@@ -174,6 +204,7 @@ export default class Engine {
   public createNode(id: string) {
     if(this.tempNode == null) {
       this.tempNode = new Node(id);
+      this.tempNode.move(Infinity, Infinity); // stops flash of node lol
     }
   }
 
@@ -226,8 +257,29 @@ export default class Engine {
     this.ctx.resetTransform();
     this.ctx.fillStyle = 'white';
     this.ctx.fillRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
-    this.ctx.translate(-(this.camera.x + this.cameraOffset.x), -(this.camera.y + this.cameraOffset.y));
+
+    this.ctx.translate(this.canvas.width / 2, this.canvas.height / 2);
+    this.ctx.scale(this.camera.zoom, this.camera.zoom);
+    this.ctx.translate(-this.cameraX, -this.cameraY);
+
+    let topLeft = this.screenToWorld(0, 0);
+    let bottomRight = this.screenToWorld(this.canvas.width, this.canvas.height);
+    const distance = 100;
+
+    this.ctx.strokeStyle = "#ddd";
+    this.ctx.beginPath();
+    for(let x = Math.floor(topLeft[0] / distance) * distance; x < bottomRight[0]; x += distance) {
+      for(let y = Math.floor(topLeft[1] / distance) * distance; y < bottomRight[1]; y += distance) {
+        
+        this.ctx.moveTo(x - 5, y);
+        this.ctx.lineTo(x + 5, y);
+        this.ctx.moveTo(x, y + -5);
+        this.ctx.lineTo(x, y + 5);
+      }
+    }
+    this.ctx.stroke();
     
+    this.ctx.lineWidth = 1;
     for(let [uuid, node] of this.nodes) {
       for(let output of node.outputs) {
         if(!(node.equals(this.focusNode) || node.equals(this.mouseNode))) {
@@ -239,6 +291,8 @@ export default class Engine {
     for(let [uuid, node] of this.nodes) {
       node.render(this.ctx, node.equals(this.focusNode));
     }
+
+    this.ctx.lineWidth = 2;
 
     if(this.mouseNode !== null && !this.mouseNode.equals(this.focusNode)) {
       for(let output of this.mouseNode.outputs) {
@@ -262,10 +316,8 @@ export default class Engine {
   
 
   public getNodeAt(x: number, y: number): Node | null {
-    let realX = this.camera.x + x;
-    let realY = this.camera.y + y;
     for(let node of this.nodes.values()) {
-      if(Math.pow(realX - node.x, 2) + Math.pow(realY - node.y, 2) < Math.pow(node.radius, 2)) {
+      if(Math.pow(x - node.x, 2) + Math.pow(y - node.y, 2) < Math.pow(node.radius, 2)) {
         return node;
       }
     }
@@ -273,7 +325,7 @@ export default class Engine {
   }
 
   public click(e: MouseEvent) {
-    let node = this.getNodeAt(e.clientX, e.clientY);
+    let node = this.getNodeAt(...this.screenToWorld(e.clientX, e.clientY));
     switch(e.button) {
       case 0: 
         if(this.tempNode) {
@@ -297,9 +349,21 @@ export default class Engine {
       case 1:
         if(this.focusNode && node !== null) {
           if(e.shiftKey) {
-            this.focusNode.toggleInput(node);
+            if(e.ctrlKey) {
+              for(let input of this.focusNode.inputs) {
+                this.focusNode.removeInput(input);
+              }
+            } else {
+              this.focusNode.toggleInput(node);
+            }
           } else {
-            this.focusNode.toggleOutput(node);
+            if(e.ctrlKey) {
+              for(let output of this.focusNode.outputs) {
+                this.focusNode.removeOutput(output);
+              }
+            } else {
+              this.focusNode.toggleOutput(node);
+            }
           }
           
         }
@@ -322,11 +386,58 @@ export default class Engine {
     this.infoboxElem.update(this.focusNode);
   }
 
+  public screenToWorld(x: number, y: number): [number, number] {
+    let result = mmult([[x, y, 1]], this.worldMatrix);
+    return [result[0][0], result[0][1]];
+  }
+
+  public worldToScreen(x: number, y: number): [number, number] {
+    let result = mmult([[x, y, 1]], this.screenMatrix);
+    return [result[0][0], result[0][1]];
+  }
+
+  public updateMatrix() {
+    const A = [
+      [1                    , 0                     , 0],
+      [0                    , 1                     , 0],
+      [this.canvas.width / 2, this.canvas.height / 2, 1],
+    ];
+    const B = [
+      [this.camera.zoom, 0               , 0],
+      [0               , this.camera.zoom, 0],
+      [0               , 0               , 1],
+    ];
+    const C = [
+      [1            , 0            , 0],
+      [0            , 1            , 0],
+      [-this.cameraX, -this.cameraY, 1],
+    ];
+    
+    const D = [
+      [1                       , 0                        , 0 ],
+      [0                       , 1                        , 0],
+      [-(this.canvas.width / 2), -(this.canvas.height / 2), 1],
+    ];
+    const E = [
+      [1 / this.camera.zoom, 0                   , 0],
+      [0                   , 1 / this.camera.zoom, 0],
+      [0                   , 0                   , 1],
+    ];
+    const F = [
+      [1           , 0           , 0],
+      [0           , 1           , 0],
+      [this.cameraX, this.cameraY, 1],
+    ];
+
+    this.screenMatrix = mmult(mmult(A, B), C);
+    this.worldMatrix = mmult(mmult(D, E), F);
+  }
+
   public fromJson(data: SaveData) {
     this.nodes.clear();
 
-    this.camera.x = data.camera.x;
-    this.camera.y = data.camera.y;
+    this.camera = { ...data.camera };
+    this.updateMatrix();
 
     this.seenResources = new Set(data.seenResources);
     // create nodes
@@ -353,10 +464,7 @@ export default class Engine {
 
   public toJson(): SaveData {
     let result: SaveData = {
-      camera: {
-        x: this.camera.x,
-        y: this.camera.y
-      },
+      camera: {...this.camera},
       nodes: {},
       seenResources: [...this.seenResources]
     };
