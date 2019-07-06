@@ -6,19 +6,21 @@
   "license": "MIT",
   "private": true,
   "scripts": {
-    "build": "node fuse dist",
-    "start": "node fuse"
+    "build": "ts-node -T fuse dist",
+    "start": "ts-node -T fuse"
   },
   "devDependencies": {
     "fuse-box": "^3.7.1",
     "node-sass": "^4.12.0",
     "opn": "^6.0.0",
     "terser": "^4.0.2",
+    "ts-node": "^8.3.0",
     "typescript": "^3.5.2",
     "uglify-js": "^3.6.0"
   },
   "dependencies": {
     "@types/uuid": "^3.4.5",
+    "preact": "^8.4.2",
     "redom": "^3.23.1",
     "uuid": "^3.3.2"
   }

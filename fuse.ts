@@ -1,9 +1,9 @@
-const { src, task, context } = require('fuse-box/sparky');
-const { FuseBox, JSONPlugin, WebIndexPlugin, SassPlugin, CSSPlugin, CSSResourcePlugin, QuantumPlugin } = require('fuse-box');
-const { promises: fs } = require('fs');
-const { join: pathJoin, basename } = require('path');
+import { src, task, context } from 'fuse-box/sparky';
+import { FuseBox, JSONPlugin, WebIndexPlugin, SassPlugin, CSSPlugin, CSSResourcePlugin, QuantumPlugin } from 'fuse-box';
+import { promises as fs } from 'fs';
+import { join as pathJoin, basename } from 'path';
 
-context(class {
+class Context {
   isProduction = false;
   getConfig() {
     return FuseBox.init({
@@ -50,9 +50,11 @@ context(class {
       .instructions("~index.ts");
     return app;    
   }
-});
+}
 
-task('default', ['data'], async context => {
+context(Context);
+
+task('default', ['data'], async (context: Context) => {
   const fuse = context.getConfig();
   fuse.dev({ open: true, port: 8080 });
   context.createVendorBundle(fuse);
@@ -60,7 +62,7 @@ task('default', ['data'], async context => {
   return fuse.run();
 });
 
-task('dist', ['clean', 'data'], async context => {
+task('dist', ['clean', 'data'], async (context: Context) => {
   context.isProduction = true;
   const fuse = context.getConfig();
   context.createVendorBundle(fuse);

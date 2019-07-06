@@ -1,5 +1,5 @@
 {
-  "speed": 5,
+  "speed": 0.25,
   "ingredients": {
     "steam": 300
   },

@@ -1,9 +1,9 @@
 import Engine from "./Engine";
-import Stats, { Panel } from "./debug";
+import Stats, { Panel } from "./utils/debug";
 
 import "./style/style.scss";
 
-import translate from './i18n';
+import translate from './utils/i18n';
 const i18n = translate('en-US');
 
 const canvas = document.querySelector("#game") as HTMLCanvasElement;
@@ -21,11 +21,11 @@ engine.mountToolbox(document.querySelector("#toolbox") as HTMLElement);
   let save = prompt("Enter a save string:", "");
   if(save == "") {
     if(confirm("Loading an empty string will reset the game to the beginnig, are you sure?")) {
-      save = '{"camera":{"x":0,"y":0,"zoom":1},"nodes":{},"seenResources":[]}';
-    } else {
-      return;
+      engine.reset();
     }
+    return;
   }
+  
   if(save) {
     try {
       engine.fromJson(JSON.parse(save));
@@ -41,7 +41,7 @@ if(process.env.NODE_ENV != 'development') {
     requestAnimationFrame(render);
   };
 
-  setInterval(() => { engine.tick(); }, 1000 / 20);
+  setInterval(() => { engine.update(); }, 1000 / 20);
   render();
 } else {
   const fpsStats = new Stats();
@@ -61,7 +61,7 @@ if(process.env.NODE_ENV != 'development') {
   document.body.appendChild(tpsStats.dom);
 
   setInterval(() => {
-    engine.tick(); tpsStats.update();
+    engine.update(); tpsStats.update();
   }, 1000 / 20);
   
   const render = () => {

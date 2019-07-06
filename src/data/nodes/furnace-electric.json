@@ -6,7 +6,7 @@
     "copper-ingot": 2,
     "iron-ingot": 4
   },
-  "buildtime": 80,
+  "buildtime": 4,
   "recipes": [
     "furnace.energy.iron",
     "furnace.energy.copper"

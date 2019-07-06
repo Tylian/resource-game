@@ -6,7 +6,7 @@
     "coal": 1,
     "iron-ingot": 5
   },
-  "buildtime": 80,
+  "buildtime": 4,
   "recipes": [
     "boil-water"
   ]

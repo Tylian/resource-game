@@ -5,7 +5,7 @@
     "coal": 1,
     "stone": 3
   },
-  "buildtime": 80,
+  "buildtime": 4,
   "recipes": [
     "furnace.basic.iron",
     "furnace.basic.copper"

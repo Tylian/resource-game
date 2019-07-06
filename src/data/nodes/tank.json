@@ -4,7 +4,7 @@
   "ingredients": {
     "iron-ingot": 2
   },
-  "buildtime": 10,
+  "buildtime": 0.5,
   "recipes": [
     "tank.water",
     "tank.steam"

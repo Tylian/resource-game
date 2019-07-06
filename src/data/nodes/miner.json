@@ -6,7 +6,7 @@
     "iron-ingot": 3
   },
   "resources": {},
-  "buildtime": 100,
+  "buildtime": 5,
   "recipes": [
     "miner.stone",
     "miner.coal",

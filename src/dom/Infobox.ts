@@ -3,7 +3,7 @@ import Engine from "../Engine";
 import Node, { Resource } from "../Node";
 import { evt } from "./utils";
 
-import translate from "../i18n";
+import translate from "../utils/i18n";
 const i18n = translate('en-US');
 
 import "../style/infobox.scss";
@@ -65,8 +65,8 @@ class RecipeContainer implements RedomComponent {
     this.outputList
   );
   update(node: Node) {
-    let perSec = 20 / node.recipe.speed;
-    this.speed.textContent = ` ${node.recipe.speed / 20}s per (${perSec}/s)`
+    let perSec = 1 / node.recipe.speed;
+    this.speed.textContent = ` ${node.recipe.speed}s per (${perSec}/s)`
     this.inputList.update(Object.entries(node.recipe.ingredients)
       .map(([name, amount]) => ({ name, amount, speed: amount * perSec })));
     this.outputList.update(Object.entries(node.recipe.results)

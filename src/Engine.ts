@@ -1,11 +1,11 @@
 import * as redom from 'redom';
 
-import { listMetadata, DataType, getMetadata, NodeMeta } from "./data";
+import { listMetadata, DataType, getMetadata, NodeMeta } from "./utils/data";
 import Node, { InstanceData } from "./Node";
 
 import InfoboxComponent from "./dom/Infobox";
 import ToolboxComponent from "./dom/Toolbox";
-import { Matrix, mmult, circleInAABB, Point } from './utils';
+import { Matrix, mmult, circleInAABB, Point } from './utils/math';
 
 const enum DragMode {
   None,
@@ -18,15 +18,16 @@ interface NodeJson extends InstanceData {
 }
 
 interface SaveData {
-  seenResources: Iterable<string>;
   camera: {
     x: number;
     y: number;
     zoom: number;
   }
+  time: number;
   nodes: {
     [uuid: string]: NodeJson;
-  }
+  },
+  seenResources: string[];
 }
 
 export interface Camera {
@@ -66,6 +67,13 @@ export default class Engine {
 
   get cameraX() { return this.camera.x + this.cameraOffset.x; }
   get cameraY() { return this.camera.y + this.cameraOffset.y; }
+
+  private timeOffset = (performance || Date).now();
+  private lastTick = this.time;
+
+  get time() {
+    return ((performance || Date).now() - this.timeOffset) / 1000;
+  }
   
   constructor(public canvas: HTMLCanvasElement, public ctx = canvas.getContext("2d", { alpha: false }) as CanvasRenderingContext2D) {
     this.canvas.width = document.documentElement.clientWidth;
@@ -231,9 +239,9 @@ export default class Engine {
     return true;
   }
 
-  public tick() {
+  public update() {
     for(let node of this.nodes.values()) {
-      node.tick();
+      node.update(this.time);
     }
 
     for(let node of this.nodes.values()) {
@@ -248,6 +256,8 @@ export default class Engine {
     if(this.focusNode !== null) {
       this.infoboxElem.update(this.focusNode);
     }
+
+    this.lastTick = this.time;
   }
 
   public render() {
@@ -292,7 +302,7 @@ export default class Engine {
     
     for(let [uuid, node] of this.nodes) {
       if(this.isNodeVisible(node)) {
-        node.render(this.ctx, node.equals(this.focusNode));
+        node.render(this.ctx, this.time, node.equals(this.focusNode));
       }
     }
 
@@ -319,7 +329,7 @@ export default class Engine {
     // XXX Can't combine with above loop because it renders under stuff
     if(this.tempNode !== null) {
       this.ctx.globalAlpha = 0.5;
-      this.tempNode.render(this.ctx, false);
+      this.tempNode.render(this.ctx, this.time, false);
       this.ctx.globalAlpha = 1;
     }
     this.ctx.restore();
@@ -412,37 +422,13 @@ export default class Engine {
   }
 
   public updateMatrix() {
-    const A = [
-      [1                    , 0                     , 0],
-      [0                    , 1                     , 0],
-      [this.canvas.width / 2, this.canvas.height / 2, 1],
-    ];
-    const B = [
-      [this.camera.zoom, 0               , 0],
-      [0               , this.camera.zoom, 0],
-      [0               , 0               , 1],
-    ];
-    const C = [
-      [1            , 0            , 0],
-      [0            , 1            , 0],
-      [-this.cameraX, -this.cameraY, 1],
-    ];
+    const A = [[1, 0, 0], [0, 1, 0], [this.canvas.width / 2, this.canvas.height / 2, 1]];
+    const B = [[this.camera.zoom, 0, 0],[0, this.camera.zoom, 0],[0, 0, 1]];
+    const C = [[1, 0, 0], [0 , 1 , 0], [-this.cameraX, -this.cameraY, 1]];
     
-    const D = [
-      [1                       , 0                        , 0 ],
-      [0                       , 1                        , 0],
-      [-(this.canvas.width / 2), -(this.canvas.height / 2), 1],
-    ];
-    const E = [
-      [1 / this.camera.zoom, 0                   , 0],
-      [0                   , 1 / this.camera.zoom, 0],
-      [0                   , 0                   , 1],
-    ];
-    const F = [
-      [1           , 0           , 0],
-      [0           , 1           , 0],
-      [this.cameraX, this.cameraY, 1],
-    ];
+    const D = [[1 , 0 , 0 ], [0 , 1 , 0], [-(this.canvas.width / 2), -(this.canvas.height / 2), 1]];
+    const E = [[1 / this.camera.zoom, 0 , 0], [0 , 1 / this.camera.zoom, 0], [0 , 0 , 1]];
+    const F = [[1 , 0 , 0], [0 , 1 , 0], [this.cameraX, this.cameraY, 1]];
 
     this.screenMatrix = mmult(mmult(A, B), C);
     this.worldMatrix = mmult(mmult(D, E), F);
@@ -456,15 +442,16 @@ export default class Engine {
     ]
   }
 
-  public fromJson(data: SaveData) {
-    this.nodes.clear();
+  public fromJson(save: SaveData) {
+    this.reset();
 
-    this.camera = { ...data.camera };
+    this.timeOffset = save.time;
+    this.camera = { ...save.camera };
     this.updateMatrix();
 
-    this.seenResources = new Set(data.seenResources);
+    this.seenResources = new Set(save.seenResources);
     // create nodes
-    for(let [uuid, info] of Object.entries(data.nodes)) {
+    for(let [uuid, info] of Object.entries(save.nodes)) {
       let node = new Node(info.type, uuid);
       this.nodes.set(node.uuid, node);
       node.loadJson(info);
@@ -472,7 +459,7 @@ export default class Engine {
 
     // load all data
     for(let [uuid, node] of this.nodes) {
-      data.nodes[uuid].outputs.forEach(uuid => {
+      save.nodes[uuid].outputs.forEach(uuid => {
         let output = this.nodes.get(uuid);
         if(output !== undefined) {
           node.addOutput(output);
@@ -480,14 +467,13 @@ export default class Engine {
       });
     }
 
-    this.focusNode = null;
-    this.infoboxElem.update(null);
-    this.toolboxElem.update();
+    this.lastTick = this.time;
   }
 
   public toJson(): SaveData {
     let result: SaveData = {
       camera: {...this.camera},
+      time: this.timeOffset,
       nodes: {},
       seenResources: [...this.seenResources]
     };
@@ -501,5 +487,29 @@ export default class Engine {
     }
 
     return result;
+  }
+
+  public reset() {
+    this.seenResources.clear();
+    this.nodes.clear();
+
+    this.timeOffset = (performance || Date).now();
+    this.camera = { x: 0, y: 0, zoom: 1};
+    this.cameraOffset = new Point(0, 0);
+    this.dragMode = DragMode.None;
+
+    this.updateMatrix();
+
+    this.mouseNode = null;
+    this.focusNode = null;
+    this.tempNode = null;
+
+    this.konami = [];
+    this.debug = false;
+
+    this.infoboxElem.update(null);
+    this.toolboxElem.update();
+
+    this.lastTick = this.time;
   }
 }

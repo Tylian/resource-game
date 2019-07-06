@@ -6,7 +6,7 @@
     "copper-ingot": 4,
     "coal": 1
   },
-  "buildtime": 15,
+  "buildtime": 0.75,
   "resources": {
     "energy": 1000000
   }

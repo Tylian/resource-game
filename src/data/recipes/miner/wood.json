@@ -1,5 +1,5 @@
 {
-  "speed": 10,
+  "speed": 0.5,
   "ingredients": {
     "energy": 180
   },

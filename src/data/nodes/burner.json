@@ -6,7 +6,7 @@
     "coal": 1,
     "iron-ingot": 2
   },
-  "buildtime": 60,
+  "buildtime": 3,
   "recipes": [
     "energy.coal"
   ]

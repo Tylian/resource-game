@@ -4,7 +4,7 @@
   "ingredients": {
     "wood": 4
   },
-  "buildtime": 10,
+  "buildtime": 0.5,
   "recipes": [
     "box.coal",
     "box.iron-ingot",

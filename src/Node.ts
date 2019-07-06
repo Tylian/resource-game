@@ -1,9 +1,9 @@
 import uuidv4 from 'uuid/v4';
 
-import { getMetadata, DataType, hasMetadata, RecipeMeta, ResourceMap, ChanceRecipe, NodeMeta } from './data';
+import { getMetadata, DataType, hasMetadata, RecipeMeta, ResourceMap, ChanceRecipe, NodeMeta } from './utils/data';
 
-import translate from './i18n';
-import { Point, AABB, lineInAABB } from './utils';
+import translate from './utils/i18n';
+import { Point, AABB, lineInAABB } from './utils/math';
 const i18n = translate('en-US');
 
 const PI2 = Math.PI * 2;
@@ -15,7 +15,7 @@ export interface InstanceData {
   outputs: string[];
   recipe: string | null;
   resources: ResourceMap;
-  progress?: number;
+  start?: number;
 }
 
 export interface Resource {
@@ -62,8 +62,10 @@ export default class Node {
   // TODO make the resources a combination of node2 + recipe?
   public resources = new Map<string, Resource>();
 
-  public progress: number | null = null;
   public recipeName: string | null = '';
+  public recipeStart: number | null;
+
+  public poked: boolean = false;
 
   //#region convenience getters
   public get data() {
@@ -99,6 +101,11 @@ export default class Node {
       return getMetadata(DataType.Recipe, this.recipeName);
     }
   }
+
+  public get recipeEnd() {
+    return this.recipeStart === null || this.recipe === null
+      ? null : this.recipeStart + this.recipe.speed;
+  }
   //#endregion
 
   constructor(public type: string, public uuid = uuidv4()) {
@@ -123,7 +130,7 @@ export default class Node {
   }
   //#endregion
 
-  public render(ctx: CanvasRenderingContext2D, focus: boolean) {
+  public render(ctx: CanvasRenderingContext2D, time: number, focus: boolean) {
     ctx.save();
 
     const mainColor = focus ? 'green' : 'black';
@@ -140,8 +147,8 @@ export default class Node {
     ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
     ctx.fill();
     
-    let recipePercent = this.progress !== null && this.recipeValid()
-      ? this.progress / this.recipe.speed : 0;
+    let recipePercent = this.recipeStart !== null && this.recipeValid()
+      ? (time - this.recipeStart) / this.recipe.speed : 0;
 
     if(recipePercent > 0) {
       ctx.strokeStyle = "#ff8080";
@@ -215,13 +222,13 @@ export default class Node {
     }
   }
 
-  public tick() {
+  public update(time: number) {
     // Only pull resources when not building
-    if(!this.isGhost() || (this.isGhost() && this.progress === null)) {
+    if(!this.isGhost() || (this.isGhost() && this.recipeStart === null)) {
       this.pullResources();
     }
 
-    this.processRecipe();
+    this.processRecipe(time);
   }
 
   private pullResources() {
@@ -248,11 +255,11 @@ export default class Node {
   }
 
   public poke() {
-    if(!this.recipeReady() || this.progress !== null) {
+    if(!this.recipeReady() || this.recipeStart !== null) {
       return;
     }
 
-    this.progress = 0;
+    this.poked = true;
   }
 
   public move(x: number, y: number) {
@@ -391,8 +398,8 @@ export default class Node {
       save.resources = Array.from(this.resources).reduce<ResourceMap>((obj, [key, value]) => (obj[key] = value.amount, obj), {});
     }
 
-    if(this.progress !== null) {
-      save.progress = this.progress;
+    if(this.recipeStart !== null) {
+      save.start = this.recipeStart;
     }
 
     return save;
@@ -409,9 +416,7 @@ export default class Node {
       this.setResourceAmount(key, value)
     };
 
-    this.progress = save.progress !== null && save.progress !== undefined
-      ? save.progress
-      : null;
+    this.recipeStart = typeof save.start === "number" ? save.start : null;
   }
   //#endregion json
 
@@ -430,7 +435,7 @@ export default class Node {
     }
 
     this.recipeName = name;
-    this.progress = null;
+    this.recipeStart = null;
     this.updateResources();
   }
 
@@ -492,39 +497,32 @@ export default class Node {
     return true;
   }
 
-  private processRecipe() {
+  private processRecipe(time: number) {
     if(!this.recipeValid()) return;
     
-    // Should start a new recipe?
-    if(this.progress === null && !(this.manual && !this.isGhost())) {
-      if(!this.recipeReady()) {
-        return;
-      }
+    if(this.recipeStart !== null && this.recipe !== null && time >= this.recipeEnd) {
+      if(this.isGhost()) {
+        this.setGhost(false);
+      } else {
+        let result = isChanceRecipe(this.recipe)
+          ? pickRandom(this.recipe.results, this.recipe.chances)
+          : this.recipe.results;
 
-      this.progress = 0;
-      for(let [name, amount] of Object.entries(this.recipe.ingredients)) {
-        let newAmount = Math.round((this.getResourceAmount(name) - amount) / amount) * amount;
-        this.setResourceAmount(name, newAmount);
-      }
-    }
-    
-    if(this.progress !== null && this.progress < this.recipe.speed) {
-      this.progress++;
-
-      if(this.progress == this.recipe.speed) {
-        if(this.isGhost()) {
-          this.setGhost(false);
-        } else {
-          let result = isChanceRecipe(this.recipe)
-            ? pickRandom(this.recipe.results, this.recipe.chances)
-            : this.recipe.results;
-
-          for(let [name, amount] of Object.entries(result)) {
-            this.setResourceAmount(name, this.getResourceAmount(name) + amount);
-          }
+        for(let [name, amount] of Object.entries(result)) {
+          this.setResourceAmount(name, this.getResourceAmount(name) + amount);
         }
-        
-        this.progress = null;
+      }
+
+      this.recipeStart = null;
+    }
+
+    // Should start a new recipe?
+    if(this.recipeStart === null && this.recipeReady() && (this.isGhost() || !this.manual || (this.manual && this.poked))) {
+      this.recipeStart = time;
+      this.poked = false;
+      for(let [name, amount] of Object.entries(this.recipe.ingredients)) {
+        let rounded = Math.round((this.getResourceAmount(name) - amount) / amount) * amount;
+        this.setResourceAmount(name, rounded);
       }
     }
   }

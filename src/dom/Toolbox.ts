@@ -1,9 +1,9 @@
 import { RedomComponent, el, Place, place } from "redom";
 import Engine from "../Engine";
-import { NodeMeta } from "../data";
+import { NodeMeta } from "../utils/data";
 import { evt } from "./utils";
 
-import translate from "../i18n";
+import translate from "../utils/i18n";
 const i18n = translate('en-US');
 
 import "../style/toolbox.scss";

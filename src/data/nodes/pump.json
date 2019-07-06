@@ -4,7 +4,7 @@
   "ingredients": {
     "iron-ingot": 2
   },
-  "buildtime": 30,
+  "buildtime": 1.5,
   "recipes": [
     "pump-water"
   ]

@@ -1,4 +1,4 @@
-import * as data from './data/data.json';
+import * as data from '../data/data.json';
 
 export interface ResourceMap<T = number> {
   [resource: string]: T
@@ -81,7 +81,7 @@ const defaultMap: DefaultMap = {
     "radius": 30,
     "resources": {},
     "ingredients": {},
-    "buildtime": 20,
+    "buildtime": 1,
     "manual": false,
     "recipes": []
   },

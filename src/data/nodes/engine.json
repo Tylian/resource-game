@@ -5,7 +5,7 @@
     "copper-ingot": 3,
     "iron-ingot": 4
   },
-  "buildtime": 80,
+  "buildtime": 4,
   "recipes": [
     "energy.steam"
   ]
