@@ -1,6 +1,7 @@
 {
   "radius": 25,
   "category": "resources",
+  "display": "none",
   "ingredients": {
     "iron-ingot": 2
   },

@@ -1,13 +1,13 @@
 {
-  "speed": 0.25,
+  "speed": 0.05,
   "ingredients": {
-    "steam": 300
+    "steam": 60
   },
   "resources": {
-    "steam": 3000,
-    "energy": 2500
+    "steam": 300,
+    "energy": 500
   },
   "results": {
-    "energy": 250
+    "energy": 50
   }
 }

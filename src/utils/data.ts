@@ -9,9 +9,16 @@ export interface I18nMeta {
   [key: string]: string;
 }
 
+export const enum DisplayType {
+  Progress = "progress",
+  Working = "working",
+  None = "none"
+}
+
 export interface NodeMeta {
   key: string;
   category: string;
+  display: DisplayType;
   manual: boolean;
   radius: number;
   ingredients: ResourceMap;
@@ -77,6 +84,7 @@ const defaultMap: DefaultMap = {
   },
   [DataType.Node]: {
     "key": "default",
+    "display": DisplayType.Progress,
     "category": "basic",
     "radius": 30,
     "resources": {},

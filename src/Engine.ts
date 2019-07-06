@@ -68,11 +68,14 @@ export default class Engine {
   get cameraX() { return this.camera.x + this.cameraOffset.x; }
   get cameraY() { return this.camera.y + this.cameraOffset.y; }
 
-  private timeOffset = (performance || Date).now();
+  private timeBase = (performance || Date).now();
+  private timeOffset = 0;
+  private timeScale = 1;
+
   private lastTick = this.time;
 
   get time() {
-    return ((performance || Date).now() - this.timeOffset) / 1000;
+    return this.timeOffset + ((performance || Date).now() - this.timeBase) / 1000 * this.timeScale;
   }
   
   constructor(public canvas: HTMLCanvasElement, public ctx = canvas.getContext("2d", { alpha: false }) as CanvasRenderingContext2D) {
@@ -404,6 +407,12 @@ export default class Engine {
     return circleInAABB(this.screenAABB, new Point(node.x, node.y), node.radius);
   }
 
+  public setTimescale(scale: number) {
+    this.timeOffset = this.time;
+    this.timeBase = (performance || Date).now();
+    this.timeScale = scale;
+  }
+
   public debugMode() {
     console.log('Debug mode enabled');
     this.debug = true;
@@ -467,13 +476,15 @@ export default class Engine {
       });
     }
 
+    this.nodes.entries
+
     this.lastTick = this.time;
   }
 
   public toJson(): SaveData {
     let result: SaveData = {
       camera: {...this.camera},
-      time: this.timeOffset,
+      time: this.time,
       nodes: {},
       seenResources: [...this.seenResources]
     };
@@ -493,7 +504,9 @@ export default class Engine {
     this.seenResources.clear();
     this.nodes.clear();
 
-    this.timeOffset = (performance || Date).now();
+    this.timeBase = (performance || Date).now();
+    this.timeOffset = 0;
+    this.timeScale = 1;
     this.camera = { x: 0, y: 0, zoom: 1};
     this.cameraOffset = new Point(0, 0);
     this.dragMode = DragMode.None;

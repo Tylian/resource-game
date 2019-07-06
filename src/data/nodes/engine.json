@@ -1,6 +1,7 @@
 {
   "radius": 40,
   "category": "generators",
+  "display": "working",
   "ingredients": {
     "copper-ingot": 3,
     "iron-ingot": 4

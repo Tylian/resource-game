@@ -1,6 +1,6 @@
 import uuidv4 from 'uuid/v4';
 
-import { getMetadata, DataType, hasMetadata, RecipeMeta, ResourceMap, ChanceRecipe, NodeMeta } from './utils/data';
+import { getMetadata, DataType, hasMetadata, RecipeMeta, ResourceMap, ChanceRecipe, NodeMeta, DisplayType } from './utils/data';
 
 import translate from './utils/i18n';
 import { Point, AABB, lineInAABB } from './utils/math';
@@ -70,6 +70,10 @@ export default class Node {
   //#region convenience getters
   public get data() {
     return getMetadata(DataType.Node, this.type) as NodeMeta;
+  }
+
+  public get display() {
+    return this.isGhost() ? DisplayType.Progress : this.data.display;
   }
 
   public get manual() {
@@ -146,22 +150,30 @@ export default class Node {
     ctx.beginPath();
     ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
     ctx.fill();
-    
-    let recipePercent = this.recipeStart !== null && this.recipeValid()
-      ? (time - this.recipeStart) / this.recipe.speed : 0;
 
-    if(recipePercent > 0) {
+    if(this.recipeValid()) {
       ctx.strokeStyle = "#ff8080";
       ctx.lineWidth = this.radius * 0.15;
 
-      ctx.beginPath();
-      ctx.arc(this.x, this.y, this.radius - ctx.lineWidth / 2, nHalfPI, nHalfPI + PI2 * recipePercent);
-      ctx.stroke();
+      if(this.display == DisplayType.Progress) {
+        let recipePercent = this.recipeStart !== null ? (time - this.recipeStart) / this.recipe.speed : 0;
+
+        if(recipePercent > 0) {
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, this.radius - ctx.lineWidth / 2, nHalfPI, nHalfPI + PI2 * recipePercent);
+          ctx.stroke();
+        }
+      } else if (this.display == DisplayType.Working && this.recipeStart !== null) {
+        let progress = time % 3;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius - ctx.lineWidth / 2, nHalfPI + PI2 * progress, nHalfPI + PI2 * (progress + 1/3));
+        ctx.stroke();
+      }
     }
 
     ctx.fillStyle = "transparent";
 
-    let r = this.recipeValid() ? (this.radius * 0.85) : this.radius;
+    let r = this.recipeValid() && this.display !== DisplayType.None ? this.radius * 0.85 : this.radius;
     let slice = r / this.resources.size;
 
     ctx.lineWidth = slice;
@@ -499,6 +511,7 @@ export default class Node {
 
   private processRecipe(time: number) {
     if(!this.recipeValid()) return;
+    let smoothing = 0;
     
     if(this.recipeStart !== null && this.recipe !== null && time >= this.recipeEnd) {
       if(this.isGhost()) {
@@ -514,11 +527,12 @@ export default class Node {
       }
 
       this.recipeStart = null;
+      smoothing = Math.max(0, time - this.recipeEnd);
     }
 
     // Should start a new recipe?
     if(this.recipeStart === null && this.recipeReady() && (this.isGhost() || !this.manual || (this.manual && this.poked))) {
-      this.recipeStart = time;
+      this.recipeStart = time - smoothing;
       this.poked = false;
       for(let [name, amount] of Object.entries(this.recipe.ingredients)) {
         let rounded = Math.round((this.getResourceAmount(name) - amount) / amount) * amount;
@@ -528,17 +542,8 @@ export default class Node {
   }
 
   private * getPullResources(): IterableIterator<[string, number]> {
-    if(this.isGhost() || !this.recipeValid()) {
-      for(let [name, resource] of this.resources) {
-        yield [name, Math.max(0, resource.maximum - resource.amount)];
-      }
-    } else {
-      for(let [name, amount] of Object.entries(this.recipe.ingredients)) {
-        let resource = this.getResource(name);
-        if(resource !== null) {
-          yield [name, Math.max(0, Math.min(Math.ceil(amount * 2 - resource.amount), resource.maximum))];
-        }
-      }
+    for(let [name, resource] of this.resources) {
+      yield [name, Math.max(0, resource.maximum - Math.ceil(resource.amount))];
     }
   }
 }

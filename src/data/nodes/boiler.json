@@ -1,6 +1,7 @@
 {
   "radius": 40,
   "category": "generators",
+  "display": "working",
   "ingredients": {
     "stone": 2,
     "coal": 1,

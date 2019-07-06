@@ -8,4 +8,4 @@ dist
 .cache
 .fusebox
 
-save.json
+saves/
