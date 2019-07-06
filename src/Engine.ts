@@ -7,6 +7,8 @@ import InfoboxComponent from "./dom/Infobox";
 import ToolboxComponent from "./dom/Toolbox";
 import { Matrix, mmult, circleInAABB, Point } from './utils/math';
 
+const SAVE_VERSION = 3;
+
 const enum DragMode {
   None,
   Camera,
@@ -18,6 +20,7 @@ interface NodeJson extends InstanceData {
 }
 
 interface SaveData {
+  version: number,
   camera: {
     x: number;
     y: number;
@@ -454,6 +457,10 @@ export default class Engine {
   public fromJson(save: SaveData) {
     this.reset();
 
+    if(save.version !== SAVE_VERSION) {
+      alert("Loading a save from a different version, migration is not implemented yet so this break things and/or void your warrenty");
+    }
+
     this.timeOffset = save.time;
     this.camera = { ...save.camera };
     this.updateMatrix();
@@ -483,6 +490,7 @@ export default class Engine {
 
   public toJson(): SaveData {
     let result: SaveData = {
+      version: SAVE_VERSION,
       camera: {...this.camera},
       time: this.time,
       nodes: {},
