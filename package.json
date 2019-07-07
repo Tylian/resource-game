@@ -19,9 +19,11 @@
     "uglify-js": "^3.6.0"
   },
   "dependencies": {
+    "@types/classnames": "^2.2.9",
     "@types/uuid": "^3.4.5",
+    "classnames": "^2.2.6",
+    "decko": "^1.2.0",
     "preact": "^8.4.2",
-    "redom": "^3.23.1",
     "uuid": "^3.3.2"
   }
 }

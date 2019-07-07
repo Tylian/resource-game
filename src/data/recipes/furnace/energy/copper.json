@@ -1,4 +1,5 @@
 {
+  "name": "Copper Ingot",
   "speed": 1,
   "ingredients": {
     "energy": 4000,

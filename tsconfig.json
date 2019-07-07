@@ -16,5 +16,6 @@
     "sourceMap": true,
     "target": "es6"
   },
-  "include": ["src/**/*", "types"]
+  "include": ["src/**/*", "types"],
+  "exclude": ["old"]
 }

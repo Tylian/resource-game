@@ -1,4 +1,5 @@
 {
+  "name": "Steam",
   "speed": 0.05,
   "ingredients": {
     "steam": 60

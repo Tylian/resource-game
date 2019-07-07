@@ -1,6 +1,7 @@
 {
+  "name": "Steam Engine",
   "radius": 40,
-  "category": "generators",
+  "category": "Generators",
   "display": "working",
   "ingredients": {
     "copper-ingot": 3,

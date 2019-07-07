@@ -1,6 +1,7 @@
 {
+  "name": "Steam Boiler",
   "radius": 40,
-  "category": "generators",
+  "category": "Generators",
   "display": "working",
   "ingredients": {
     "stone": 2,

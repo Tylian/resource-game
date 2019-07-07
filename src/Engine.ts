@@ -1,11 +1,9 @@
-import * as redom from 'redom';
-
-import { listMetadata, DataType, getMetadata, NodeMeta } from "./utils/data";
+import { EventEmitter } from 'events';
+import { DataType, getMetadata } from "./utils/data";
 import Node, { InstanceData } from "./Node";
 
-import InfoboxComponent from "./dom/Infobox";
-import ToolboxComponent from "./dom/Toolbox";
 import { Matrix, mmult, circleInAABB, Point } from './utils/math';
+import { bind } from 'decko';
 
 const SAVE_VERSION = 3;
 
@@ -41,7 +39,10 @@ export interface Camera {
 
 const Konami: number[] = [13, 65, 66, 39, 37, 39, 37, 40, 40, 38, 38];
 
-export default class Engine {
+export default class Engine extends EventEmitter {
+  public canvas: HTMLCanvasElement;
+  public ctx: CanvasRenderingContext2D;
+
   public nodes = new Map<string, Node>();
   public camera: Camera = { x: 0, y: 0, zoom: 1 };
   public cameraOffset: Point = new Point(0, 0)
@@ -53,10 +54,9 @@ export default class Engine {
   private targetNode: Node | null = null;
   private tempNode: Node | null = null;
   private mouseNode: Node | null = null;
-  private focusNode: Node | null = null;
+  public focusNode: Node | null = null;
 
-  private infoboxElem: InfoboxComponent;
-  private toolboxElem: ToolboxComponent;
+  private domElement: Element;
 
   private seenResources = new Set<string>();
 
@@ -71,6 +71,9 @@ export default class Engine {
   get cameraX() { return this.camera.x + this.cameraOffset.x; }
   get cameraY() { return this.camera.y + this.cameraOffset.y; }
 
+  get canvasWidth() { return this.canvas ? this.canvas.width : 0; }
+  get canvasHeight() { return this.canvas ? this.canvas.height : 0; }
+
   private timeBase = (performance || Date).now();
   private timeOffset = 0;
   private timeScale = 1;
@@ -80,11 +83,19 @@ export default class Engine {
   get time() {
     return this.timeOffset + ((performance || Date).now() - this.timeBase) / 1000 * this.timeScale;
   }
-  
-  constructor(public canvas: HTMLCanvasElement, public ctx = canvas.getContext("2d", { alpha: false }) as CanvasRenderingContext2D) {
+
+  public mount(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D = canvas.getContext("2d", { alpha: false })) {
+    this.canvas = canvas;
+    this.ctx = ctx;
+
     this.canvas.width = document.documentElement.clientWidth;
     this.canvas.height = document.documentElement.clientHeight;
 
+    this.bindEvents();
+    this.updateMatrix();
+  }
+
+  public bindEvents() {
     window.addEventListener("resize", e => {
       this.canvas.width = document.documentElement.clientWidth;
       this.canvas.height = document.documentElement.clientHeight;
@@ -98,11 +109,10 @@ export default class Engine {
         console.log(`${e.key}: ${key}`);
       }
 
-      if((key == 46 || key == 8) && this.focusNode !== null) {
+      if((key == 46 || key == 8) && this.focusNode instanceof Node) {
         this.focusNode.clearConnections();
         this.nodes.delete(this.focusNode.uuid);
-        this.focusNode = null;
-        this.infoboxElem.update(null);
+        this.setFocusNode(null);
       }
 
       this.konami = [key, ...this.konami].slice(0, Konami.length);
@@ -110,13 +120,13 @@ export default class Engine {
         this.debugMode();
       }
 
-      if(this.debug && key == 70 && this.mouseNode !== null) {
+      if(this.debug && key == 70 && this.mouseNode instanceof Node) {
         for(let [key, resource] of this.mouseNode.resources) {
           resource.amount = resource.maximum;
         }
       }
 
-      if(this.debug && key == 69 && this.mouseNode !== null) {
+      if(this.debug && key == 69 && this.mouseNode instanceof Node) {
         for(let [key, resource] of this.mouseNode.resources) {
           resource.amount = 0;
         }
@@ -135,11 +145,11 @@ export default class Engine {
       e.preventDefault();
     })
 
-    canvas.addEventListener("mousedown", (e) => {
+    this.canvas.addEventListener("mousedown", (e) => {
       let mouse = this.screenToWorld(e.clientX, e.clientY);
       if(e.button == 0) {
         let node = this.getNodeAt(...mouse);
-        if(node !== null) {
+        if(node instanceof Node) {
           this.dragMode = DragMode.Node;
           this.targetNode = node;
           this.dragOrigin = new Point(e.clientX, e.clientY);
@@ -151,7 +161,7 @@ export default class Engine {
       } 
     });
 
-    canvas.addEventListener("mousemove", (e) => {
+    this.canvas.addEventListener("mousemove", (e) => {
       let mouse = this.screenToWorld(e.clientX, e.clientY);
       this.mouseNode = this.getNodeAt(...mouse);
 
@@ -159,7 +169,7 @@ export default class Engine {
         this.cameraOffset.x = (this.dragOrigin.x - e.clientX) / this.camera.zoom;
         this.cameraOffset.y = (this.dragOrigin.y - e.clientY) / this.camera.zoom;
         this.updateMatrix();
-      } else if(this.dragMode == DragMode.Node && this.targetNode !== null) {
+      } else if(this.dragMode == DragMode.Node && this.targetNode instanceof Node) {
         this.targetNode.move(
           mouse[0] + this.dragOffset.x,
           mouse[1] + this.dragOffset.y
@@ -168,15 +178,15 @@ export default class Engine {
 
       // Update cursor
       let node = this.getNodeAt(...mouse);
-      canvas.classList.toggle("cursor-move", node !== null && !node.manual);
-      canvas.classList.toggle("cursor-pointer", node !== null && node.manual);
+      this.canvas.classList.toggle("cursor-move", node instanceof Node && !node.manual);
+      this.canvas.classList.toggle("cursor-pointer", node instanceof Node && node.manual);
 
       if(this.tempNode) {
         this.tempNode.move(...mouse);
       }
     });
 
-    canvas.addEventListener("mouseup", (e) => {
+    this.canvas.addEventListener("mouseup", (e) => {
       if(this.dragMode == DragMode.None || this.dragMode > DragMode.None && (e.clientX == this.dragOrigin.x && e.clientY == this.dragOrigin.y)) {
         this.click(e);
       }
@@ -194,15 +204,13 @@ export default class Engine {
       }
     });
 
-    canvas.addEventListener("contextmenu", (e) => {
+    this.canvas.addEventListener("contextmenu", (e) => {
       e.preventDefault();
       return false;
     });
-
-    this.infoboxElem = new InfoboxComponent(this);
-    this.updateMatrix();
   }
 
+  /*
   public mountInfobox(container: HTMLElement) {
     redom.mount(document.body, this.infoboxElem, container, true);
   }
@@ -211,9 +219,10 @@ export default class Engine {
     this.toolboxElem = new ToolboxComponent(this, listMetadata(DataType.Node).map(key => getMetadata(DataType.Node, key)));
     redom.mount(document.body, this.toolboxElem, container, true);
   }
+  */
 
   public createNode(id: string) {
-    if(this.tempNode == null) {
+    if(!(this.tempNode instanceof Node)) {
       this.tempNode = new Node(id);
       this.tempNode.move(Infinity, Infinity); // stops flash of node lol
     }
@@ -254,13 +263,9 @@ export default class Engine {
       for(let [key, resource] of node.resources) {
         if(!this.seenResources.has(key) && resource.amount > 0) {
           this.seenResources.add(key);
-          this.toolboxElem.update();
+          this.emit('toolbox');
         }
       }
-    }
-
-    if(this.focusNode !== null) {
-      this.infoboxElem.update(this.focusNode);
     }
 
     this.lastTick = this.time;
@@ -270,14 +275,14 @@ export default class Engine {
     this.ctx.save();
     this.ctx.resetTransform();
     this.ctx.fillStyle = 'white';
-    this.ctx.fillRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
+    this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
 
-    this.ctx.translate(this.canvas.width / 2, this.canvas.height / 2);
+    this.ctx.translate(this.canvasWidth / 2, this.canvasHeight / 2);
     this.ctx.scale(this.camera.zoom, this.camera.zoom);
     this.ctx.translate(-this.cameraX, -this.cameraY);
 
     let topLeft = this.screenToWorld(0, 0);
-    let bottomRight = this.screenToWorld(this.canvas.width, this.canvas.height);
+    let bottomRight = this.screenToWorld(this.canvasWidth, this.canvasHeight);
     const distance = 100;
 
     this.ctx.strokeStyle = "#ddd";
@@ -313,7 +318,7 @@ export default class Engine {
     }
 
     this.ctx.lineWidth = 2;
-    if(this.mouseNode !== null && !this.mouseNode.equals(this.focusNode)) {
+    if(this.mouseNode instanceof Node && !this.mouseNode.equals(this.focusNode)) {
       this.ctx.strokeStyle = this.mouseNode.isGhost() ? 'rgba(0,0,0,0.5)' : 'black';
       this.ctx.beginPath();
       for(let output of this.mouseNode.outputs) {
@@ -323,7 +328,7 @@ export default class Engine {
     }
     
 
-    if(this.focusNode !== null) {
+    if(this.focusNode instanceof Node) {
       this.ctx.strokeStyle = this.focusNode.isGhost() ? 'rgba(0,0,80,0.5)' : 'green';
       this.ctx.beginPath();
       for(let output of this.focusNode.outputs) {
@@ -333,14 +338,31 @@ export default class Engine {
     }
 
     // XXX Can't combine with above loop because it renders under stuff
-    if(this.tempNode !== null) {
+    if(this.tempNode instanceof Node) {
       this.ctx.globalAlpha = 0.5;
       this.tempNode.render(this.ctx, this.time, false);
       this.ctx.globalAlpha = 1;
     }
     this.ctx.restore();
   }
+
+  @bind
+  private emitInfobox() {
+    this.emit('infobox');
+  }
   
+  public setFocusNode(node: Node | null) {
+    if(this.focusNode instanceof Node) {
+      this.focusNode.removeListener('update', this.emitInfobox);
+    }
+
+    this.focusNode = node;
+    this.emit('infobox');
+
+    if(node instanceof Node) {
+      node.on('update', this.emitInfobox);
+    }
+  }
 
   public getNodeAt(x: number, y: number): Node | null {
     for(let node of this.nodes.values()) {
@@ -361,20 +383,19 @@ export default class Engine {
           break;
         }
 
-        if(node !== null) {
+        if(node instanceof Node) {
           if(e.shiftKey) {
             node.poke();
           } else {
-            this.focusNode = node;
+            this.setFocusNode(node);
           }
-        } else if(this.focusNode !== null) {
-          this.focusNode = null;
-          this.infoboxElem.update(this.focusNode);
+        } else if(this.focusNode instanceof Node) {
+          this.setFocusNode(null);
         }
 
         break;
       case 1:
-        if(this.focusNode && node !== null) {
+        if(this.focusNode instanceof Node && node instanceof Node) {
           if(e.shiftKey) {
             if(e.ctrlKey) {
               for(let input of this.focusNode.inputs) {
@@ -419,8 +440,8 @@ export default class Engine {
   public debugMode() {
     console.log('Debug mode enabled');
     this.debug = true;
-    this.toolboxElem.update();
-    this.infoboxElem.update(this.focusNode);
+    this.emit('toolbox');
+    this.emit('infobox');
   }
 
   public screenToWorld(x: number, y: number): [number, number] {
@@ -434,11 +455,11 @@ export default class Engine {
   }
 
   public updateMatrix() {
-    const A = [[1, 0, 0], [0, 1, 0], [this.canvas.width / 2, this.canvas.height / 2, 1]];
+    const A = [[1, 0, 0], [0, 1, 0], [this.canvasWidth / 2, this.canvasHeight / 2, 1]];
     const B = [[this.camera.zoom, 0, 0],[0, this.camera.zoom, 0],[0, 0, 1]];
     const C = [[1, 0, 0], [0 , 1 , 0], [-this.cameraX, -this.cameraY, 1]];
     
-    const D = [[1 , 0 , 0 ], [0 , 1 , 0], [-(this.canvas.width / 2), -(this.canvas.height / 2), 1]];
+    const D = [[1 , 0 , 0 ], [0 , 1 , 0], [-(this.canvasWidth / 2), -(this.canvasHeight / 2), 1]];
     const E = [[1 / this.camera.zoom, 0 , 0], [0 , 1 / this.camera.zoom, 0], [0 , 0 , 1]];
     const F = [[1 , 0 , 0], [0 , 1 , 0], [this.cameraX, this.cameraY, 1]];
 
@@ -446,7 +467,7 @@ export default class Engine {
     this.worldMatrix = mmult(mmult(D, E), F);
 
     let topLeft = this.screenToWorld(0, 0);
-    let bottomRight = this.screenToWorld(this.canvas.width, this.canvas.height);
+    let bottomRight = this.screenToWorld(this.canvasWidth, this.canvasHeight);
 
     this.screenAABB = [
       new Point(topLeft[0], topLeft[1]),
@@ -521,15 +542,16 @@ export default class Engine {
 
     this.updateMatrix();
 
+    this.setFocusNode(null);
     this.mouseNode = null;
-    this.focusNode = null;
     this.tempNode = null;
 
     this.konami = [];
     this.debug = false;
 
-    this.infoboxElem.update(null);
-    this.toolboxElem.update();
+    // this.infoboxElem.update(null);
+    // this.toolboxElem.update();
+    this.emit('toolbox');
 
     this.lastTick = this.time;
   }

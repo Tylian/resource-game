@@ -1,6 +1,7 @@
 {
+  "name": "Coal Burner",
   "radius": 45,
-  "category": "generators",
+  "category": "Generators",
   "display": "working",
   "ingredients": {
     "stone": 4,

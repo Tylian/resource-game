@@ -1,4 +1,5 @@
 {
+  "name": "Burn Coal",
   "speed": 0.05,
   "ingredients": {
     "coal": 0.015

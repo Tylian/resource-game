@@ -1,13 +1,9 @@
-#infobox {
+.infobox {
   position: absolute;
   top: 0;
   right: 0;
   padding: 10px;
   width: 300px;
-
-  &.hidden, .hidden {
-    display: none;
-  }
 
   h1, h2, h3, h4, h5, h6 {
     padding: 0;

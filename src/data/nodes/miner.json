@@ -1,6 +1,7 @@
 {
+  "name": "Miner",
   "radius": 60,
-  "category": "resources",
+  "category": "Resources",
   "ingredients": {
     "copper-ingot": 1,
     "iron-ingot": 3

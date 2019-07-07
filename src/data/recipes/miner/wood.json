@@ -1,4 +1,5 @@
 {
+  "name": "Chop Wood",
   "speed": 0.5,
   "ingredients": {
     "energy": 180

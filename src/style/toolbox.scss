@@ -1,4 +1,4 @@
-#toolbox {
+.toolbox {
   top: 0;
   left: 0;
   width: 140px;
@@ -6,15 +6,16 @@
   max-height: 100%;
   overflow-y: auto;
 
-  .accordian h1 {
-    cursor: pointer;
-    font-size: 1.2em;
-    margin: 8px 0 3px;
-    padding: 0;
-    user-select: none;
-  }
-
   button {
     display: block;
   }
+}
+
+.accordian h1 {
+  cursor: pointer;
+  font-size: 1.2em;
+  margin: 8px 0 3px;
+  padding: 0;
+  user-select: none;
+  --moz-user-select: none;
 }

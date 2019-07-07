@@ -1,6 +1,7 @@
 {
+  "name": "Storage",
   "radius": 40,
-  "category": "storage",
+  "category": "Storage",
   "display": "none",
   "ingredients": {
     "wood": 4

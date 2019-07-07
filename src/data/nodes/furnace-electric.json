@@ -1,6 +1,7 @@
 {
+  "name": "Arc Furnace",
   "radius": 40,
-  "category": "processing",
+  "category": "Processing",
   "ingredients": {
     "stone": 2,
     "copper-ingot": 2,

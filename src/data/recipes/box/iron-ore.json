@@ -1,4 +1,5 @@
 {
+  "name": "Iron Ore",
   "resources": {
     "iron-ore": 400
   }

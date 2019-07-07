@@ -1,4 +1,5 @@
 {
+  "name": "Boil Water",
   "speed": 0.05,
   "ingredients": {
     "water": 60,

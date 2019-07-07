@@ -1,4 +1,5 @@
 {
+  "name": "Iron",
   "speed": 2,
   "ingredients": {
     "energy": 180

@@ -1,6 +1,7 @@
 {
+  "name": "Water Pump",
   "radius": 25,
-  "category": "resources",
+  "category": "Resources",
   "display": "none",
   "ingredients": {
     "iron-ingot": 2

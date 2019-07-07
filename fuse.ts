@@ -41,13 +41,13 @@ class Context {
       app.watch();
       app.hmr();
     }
-    app.instructions('>[index.ts]');
+    app.instructions('>[index.tsx]');
     return app;
   }
   createVendorBundle(fuse) {
     const app = fuse
       .bundle("vendor")
-      .instructions("~index.ts");
+      .instructions("~index.tsx");
     return app;    
   }
 }

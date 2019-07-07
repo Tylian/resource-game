@@ -20,7 +20,5 @@ And a few core gameplay principles I'm designing around:
       - Debug: ?
     - Each capability should handle it's own rendering
     - Each capability can provide an inventory, the sum of which the node uses
-  - **Rendering**
-   - Don't render off screen stuff
-  - **Performance**
-   - Change the tick system to tick as fast as possible (maybe limit to 20/s anyway) and convert all stuff to use delta time rather than engine ticks
+  - **Resource Ordering**
+    - Add a sort order to the resource metadata, and display all resources in a consistant order.

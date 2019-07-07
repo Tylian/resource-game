@@ -1,4 +1,5 @@
 {
+  "name": "Water",
   "speed": 0.05,
   "ingredients": {},
   "resources": {

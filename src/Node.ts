@@ -1,10 +1,9 @@
 import uuidv4 from 'uuid/v4';
 
-import { getMetadata, DataType, hasMetadata, RecipeMeta, ResourceMap, ChanceRecipe, NodeMeta, DisplayType } from './utils/data';
+import { getMetadata, DataType, hasMetadata, RecipeMeta, ResourceMap, NodeMeta, DisplayType } from './utils/data';
 
-import translate from './utils/i18n';
 import { Point, AABB, lineInAABB } from './utils/math';
-const i18n = translate('en-US');
+import { EventEmitter } from 'events';
 
 const PI2 = Math.PI * 2;
 const nHalfPI = -Math.PI / 2;
@@ -36,10 +35,6 @@ function pickRandom<T>(items: Array<T>, chances: Array<number>): T {
   return items.find((el, i) => chances[i] > rand) as T;
 }
 
-function isChanceRecipe(recipe: RecipeMeta): recipe is ChanceRecipe {
-  return Array.isArray(recipe.results);
-}
-
 function drawText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, fill = "black", stroke = "white") {
   ctx.save()
  
@@ -52,20 +47,21 @@ function drawText(ctx: CanvasRenderingContext2D, text: string, x: number, y: num
   ctx.restore();
 }
 
-export default class Node {
+export default class Node extends EventEmitter {
   public x = 0;
   public y = 0;
 
   public inputs = new Set<Node>();
   public outputs = new Set<Node>();
 
-  // TODO make the resources a combination of node2 + recipe?
   public resources = new Map<string, Resource>();
 
   public recipeName: string | null = '';
   public recipeStart: number | null;
 
   public poked: boolean = false;
+
+  private dirty = false;
 
   //#region convenience getters
   public get data() {
@@ -96,6 +92,7 @@ export default class Node {
     if(this.isGhost()) {
       return {
         key: "ghost",
+        name: "WIP",
         speed: this.data.buildtime,
         ingredients: this.data.ingredients,
         resources: this.data.ingredients,
@@ -113,11 +110,17 @@ export default class Node {
   //#endregion
 
   constructor(public type: string, public uuid = uuidv4()) {
+    super();
     if(!hasMetadata(DataType.Node, type)) {
       throw new ReferenceError(`${type} is not a valid node type`);
     }
 
     this.setGhost(true);
+    this.markDirty();
+  }
+
+  public markDirty() {
+    this.dirty = true;
   }
 
   //#region ghost
@@ -194,12 +197,12 @@ export default class Node {
 
     if(this.recipe === null || this.isGhost()) {
       ctx.font = "bold 9px sans-serif";
-      drawText(ctx, i18n(`node.${this.type}`), this.x, this.y, mainColor, accentColor);
+      drawText(ctx, this.data.name, this.x, this.y, mainColor, accentColor);
     } else {
       ctx.font = "bold 9px sans-serif";
-      drawText(ctx, i18n(`node.${this.type}`), this.x, this.y - lineHeight / 2, mainColor, accentColor);
+      drawText(ctx, this.data.name, this.x, this.y - lineHeight / 2, mainColor, accentColor);
       ctx.font = "9px sans-serif";
-      drawText(ctx, i18n(`recipe.${this.isGhost() ? "ghost" : this.recipeName}`), this.x, this.y + lineHeight / 2, mainColor, accentColor);
+      drawText(ctx, this.recipe.name, this.x, this.y + lineHeight / 2, mainColor, accentColor);
     }
 
     ctx.strokeStyle = mainColor;
@@ -241,6 +244,10 @@ export default class Node {
     }
 
     this.processRecipe(time);
+    if(this.dirty) {
+      this.emit('update');
+      this.dirty = false;
+    }
   }
 
   private pullResources() {
@@ -257,8 +264,9 @@ export default class Node {
         if(pulled > 0) {
           resource.amount += pulled;
           remaining -= pulled;
+          this.markDirty();
         }
-        
+
         if(remaining <= 0) {
           break;
         }
@@ -294,6 +302,7 @@ export default class Node {
     let available = Math.floor(Math.min(resource.amount, amount));
     if(!simulate) {
       resource.amount -= available;
+      this.markDirty();
     }
 
     return available;
@@ -429,6 +438,7 @@ export default class Node {
     };
 
     this.recipeStart = typeof save.start === "number" ? save.start : null;
+    this.markDirty();
   }
   //#endregion json
 
@@ -449,6 +459,7 @@ export default class Node {
     this.recipeName = name;
     this.recipeStart = null;
     this.updateResources();
+    this.markDirty();
   }
 
   public equals(node: Node | null) {
@@ -517,27 +528,28 @@ export default class Node {
       if(this.isGhost()) {
         this.setGhost(false);
       } else {
-        let result = isChanceRecipe(this.recipe)
-          ? pickRandom(this.recipe.results, this.recipe.chances)
-          : this.recipe.results;
-
-        for(let [name, amount] of Object.entries(result)) {
+        for(let [name, amount] of Object.entries(this.recipe.results)) {
           this.setResourceAmount(name, this.getResourceAmount(name) + amount);
         }
+
+        this.markDirty();
       }
 
-      this.recipeStart = null;
       smoothing = Math.max(0, time - this.recipeEnd);
+      this.recipeStart = null;
     }
 
     // Should start a new recipe?
     if(this.recipeStart === null && this.recipeReady() && (this.isGhost() || !this.manual || (this.manual && this.poked))) {
       this.recipeStart = time - smoothing;
       this.poked = false;
+
       for(let [name, amount] of Object.entries(this.recipe.ingredients)) {
         let rounded = Math.round((this.getResourceAmount(name) - amount) / amount) * amount;
         this.setResourceAmount(name, rounded);
       }
+
+      this.markDirty();
     }
   }
 

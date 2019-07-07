@@ -4,11 +4,6 @@ export interface ResourceMap<T = number> {
   [resource: string]: T
 }
 
-export interface I18nMeta {
-  key: string;
-  [key: string]: string;
-}
-
 export const enum DisplayType {
   Progress = "progress",
   Working = "working",
@@ -17,6 +12,7 @@ export const enum DisplayType {
 
 export interface NodeMeta {
   key: string;
+  name: string;
   category: string;
   display: DisplayType;
   manual: boolean;
@@ -27,38 +23,26 @@ export interface NodeMeta {
   recipes: string[];
 }
 
-export interface BaseRecipe {
+export interface RecipeMeta {
   key: string;
+  name: string;
   speed: number;
   ingredients: ResourceMap;
   resources: ResourceMap;
-}
-
-export interface StandardRecipe extends BaseRecipe  {
   results: ResourceMap;
 }
 
-export interface ChanceRecipe extends BaseRecipe {
-  results: ResourceMap[];
-  chances: number[];
-}
-
-export type RecipeMeta = StandardRecipe | ChanceRecipe;
-
 export interface ResourceMeta {
   key: string;
+  name: string;
   color: string;
 }
 
-type MetaType = I18nMeta | NodeMeta | RecipeMeta | ResourceMeta;
-
-type I18nData = Partial<I18nMeta>;
 type NodeData = Partial<NodeMeta>;
 type RecipeData = Partial<RecipeMeta>;
 type ResourceData = Partial<ResourceMeta>;
 
 export const enum DataType {
-  I18n = "i18n",
   Node = "nodes",
   Recipe = "recipes",
   Resource = "resources"
@@ -66,7 +50,6 @@ export const enum DataType {
 
 type MetaMap<T> = { [key: string]: T };
 type DataMap = {
-  [DataType.I18n]: MetaMap<I18nData>,
   [DataType.Node]: MetaMap<NodeData>,
   [DataType.Recipe]: MetaMap<RecipeData>,
   [DataType.Resource]: MetaMap<ResourceData>
@@ -77,13 +60,11 @@ export interface UnknownMeta {
   [key: string]: any;
 }
 
-type DefaultMap = {[DataType.I18n]: I18nMeta, [DataType.Node]: NodeMeta, [DataType.Recipe]: RecipeMeta, [DataType.Resource]: ResourceMeta}
+type DefaultMap = { [DataType.Node]: NodeMeta, [DataType.Recipe]: RecipeMeta, [DataType.Resource]: ResourceMeta }
 const defaultMap: DefaultMap = {
-  [DataType.I18n]: {
-    "key": "default",
-  },
   [DataType.Node]: {
     "key": "default",
+    "name": "Default",
     "display": DisplayType.Progress,
     "category": "basic",
     "radius": 30,
@@ -95,6 +76,7 @@ const defaultMap: DefaultMap = {
   },
   [DataType.Recipe]: {
     "key": "default",
+    "name": "Default",
     "speed": 0,
     "ingredients": {},
     "resources": {},
@@ -102,6 +84,7 @@ const defaultMap: DefaultMap = {
   },
   [DataType.Resource]: {
     "key": "default",
+    "name": "Default",
     "color": "black"
   }
 };
@@ -123,7 +106,6 @@ export function hasMetadata(type: DataType, id: string): boolean {
   return metadata !== null && typeof metadata === "object";
 }
 
-export function getMetadata(type: DataType.I18n, id: string): I18nMeta | null;
 export function getMetadata(type: DataType.Node, id: string): NodeMeta | null;
 export function getMetadata(type: DataType.Recipe, id: string): RecipeMeta | null;
 export function getMetadata(type: DataType.Resource, id: string): ResourceMeta | null;
