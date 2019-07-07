@@ -170,10 +170,16 @@ export default class Engine extends EventEmitter {
         this.cameraOffset.y = (this.dragOrigin.y - e.clientY) / this.camera.zoom;
         this.updateMatrix();
       } else if(this.dragMode == DragMode.Node && this.targetNode instanceof Node) {
-        this.targetNode.move(
-          mouse[0] + this.dragOffset.x,
-          mouse[1] + this.dragOffset.y
-        );
+        let x = mouse[0] + this.dragOffset.x;
+        let y = mouse[1] + this.dragOffset.y;
+        let gridSnap = e.shiftKey ? (e.ctrlKey ? this.targetNode.radius / 2 : this.targetNode.radius) : 0;
+
+        if(gridSnap > 0) {
+          x = Math.round(x / gridSnap) * gridSnap;
+          y = Math.round(y / gridSnap) * gridSnap;
+        }
+
+        this.targetNode.move(x, y);
       }
 
       // Update cursor

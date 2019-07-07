@@ -66,7 +66,7 @@ const defaultMap: DefaultMap = {
     "key": "default",
     "name": "Default",
     "display": DisplayType.Progress,
-    "category": "basic",
+    "category": "Basic",
     "radius": 30,
     "resources": {},
     "ingredients": {},

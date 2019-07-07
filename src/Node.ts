@@ -39,9 +39,10 @@ function drawText(ctx: CanvasRenderingContext2D, text: string, x: number, y: num
   ctx.save()
  
   ctx.lineWidth = 2;
+  ctx.lineJoin = 'round';
   ctx.strokeStyle = stroke;
-  ctx.fillStyle = fill;
   ctx.strokeText(text, x, y);
+  ctx.fillStyle = fill;
   ctx.fillText(text, x, y);
 
   ctx.restore();
@@ -148,6 +149,7 @@ export default class Node extends EventEmitter {
     }
 
     ctx.lineWidth = 1;
+    ctx.lineJoin = 'round';
     
     ctx.fillStyle = accentColor;
     ctx.beginPath();
@@ -228,6 +230,7 @@ export default class Node extends EventEmitter {
     };
 
     if(lineInAABB(from, to, screenAABB)) {
+      ctx.lineJoin = 'round';
       ctx.moveTo(from.x, from.y);
       ctx.lineTo(to.x, to.y);
       
